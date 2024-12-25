@@ -12,9 +12,9 @@
         </div>
     </header>
     <ul class="image-list">
-        {% for thumbnail in current_thumbnails %}
+        {% for img, thumbnail in current_thumbnails %}
             <li>
-                <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + thumbnail) }}">
+                <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
                     <div class="thumbnail">
                         <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
                     </div>

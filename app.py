@@ -42,11 +42,12 @@ def image_gallery():
     # Slice the image list to display images for the current page
     current_images = image_files[start_idx:end_idx]
     current_thumbnails = get_thumbnails(current_images)
+    current_all = [(x,y) for x,y in zip(current_images,current_thumbnails)]
 
     # Generate thumbnails for the current page if they don't exist
     generate_thumbnails(current_images)
 
-    return render_template('index.html', current_thumbnails=current_thumbnails, total_pages=total_pages, page=page)
+    return render_template('index.html', current_thumbnails=current_all, total_pages=total_pages, page=page)
 
 def generate_thumbnails(file_list):
     for file in file_list:
