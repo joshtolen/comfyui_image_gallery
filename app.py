@@ -1,11 +1,12 @@
 import os
 from flask import Flask, render_template, request
 from PIL import Image, ImageFilter
+from moviepy.editor import VideoFileClip
 
 app = Flask(__name__)
 
 # Define the directory where your original images are stored
-image_dir = 'static/images/output'
+file_dir = 'static/images/output'
 
 # Define the directory where thumbnails will be stored
 thumbnail_dir = 'static/thumbnails'
@@ -13,7 +14,7 @@ thumbnail_dir = 'static/thumbnails'
 @app.route('/')
 def image_gallery():
     # Get a list of image files from the specified directory
-    image_files = [f for f in os.listdir(image_dir) if f.endswith(('.jpg', '.png', '.jpeg', '.gif'))]
+    image_files = [f for f in os.listdir(file_dir) if f.endswith(('.jpg', '.png', '.jpeg', '.gif'))]
     # Sort the list of image files by last modified date (newest first)
     image_files.sort(key=lambda x: os.path.getmtime(os.path.join(image_dir, x)), reverse=True)
 
@@ -46,18 +47,36 @@ def image_gallery():
 
     return render_template('index.html', current_thumbnails=current_images, total_pages=total_pages, page=page)
 
-def generate_thumbnails(image_list):
-    for image in image_list:
-        thumbnail_path = os.path.join(thumbnail_dir, image)
+def generate_thumbnails(file_list):
+    for file in file_list:
+        # Create a consistent naming convention for thumbnail files
+        thumbnail_path = os.path.join(thumbnail_dir, f"{os.path.splitext(file)[0]}_thumbnail.jpg")
+
         if not os.path.exists(thumbnail_path):
             try:
-                original_image = Image.open(os.path.join(image_dir, image))
-                max_width = 200  # Define your desired thumbnail width
-                max_height = 200  # Define your desired thumbnail height
-                original_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
-                original_image.save(thumbnail_path)
+                # Check if the file is an image or a video (by extension)
+                if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
+                    # Handle image files, including '.webp'
+                    original_image = Image.open(os.path.join(image_dir, file))
+                    max_width = 200  # Define your thumbnail dimensions
+                    max_height = 200
+                    original_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
+                    original_image.save(thumbnail_path)
+                elif file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')):
+                    # Handle video files, including '.webm' and '.mp5'
+                    video_path = os.path.join(file_dir, file)  # Assuming videos are stored in `video_dir`
+                    with VideoFileClip(video_path) as video:
+                        # Capture the frame at 1 second (or earlier if the video is shorter)
+                        frame = video.get_frame(1.0)
+                        # Convert the frame (numpy array) to an image
+                        thumbnail_image = Image.fromarray(frame)
+                        # Resize the frame for a thumbnail
+                        max_width = 200
+                        max_height = 200
+                        thumbnail_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
+                        thumbnail_image.save(thumbnail_path)
             except Exception as e:
-                print(f"Error generating thumbnail for {image}: {str(e)}")
+                print(f"Error generating thumbnail for {file}: {str(e)}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9999)
