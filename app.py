@@ -41,11 +41,12 @@ def image_gallery():
 
     # Slice the image list to display images for the current page
     current_images = image_files[start_idx:end_idx]
+    current_thumbnails = get_thumbnails(current_images)
 
     # Generate thumbnails for the current page if they don't exist
     generate_thumbnails(current_images)
 
-    return render_template('index.html', current_thumbnails=current_images, total_pages=total_pages, page=page)
+    return render_template('index.html', current_thumbnails, total_pages=total_pages, page=page)
 
 def generate_thumbnails(file_list):
     for file in file_list:
@@ -77,6 +78,20 @@ def generate_thumbnails(file_list):
                         thumbnail_image.save(thumbnail_path)
             except Exception as e:
                 print(f"Error generating thumbnail for {file}: {str(e)}")
+
+def get_thumbnails(current_files):
+    # Create the list where the thumbnails will be stored
+    current_thumbnails = []
+
+    for image in current_files:
+        # Get the file name without the extension
+        base_name = os.path.splitext(image)[0]
+        # Append '_thumbnail.png' to the base name
+        thumbnail_name = f"{base_name}_thumbnail.png"
+        # Add to the thumbnails list
+        current_thumbnails.append(thumbnail_name)
+
+    return current_thumbnails
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9999)
