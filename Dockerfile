@@ -4,13 +4,13 @@ FROM python:3.12-alpine
 WORKDIR /app
 
 # Copy requirements to the container
-COPY requirements.txt /app/requirements.txt
+COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire application code
-COPY static /app
+COPY . /app
 
 # Expose the port your app runs on
 EXPOSE 9999
