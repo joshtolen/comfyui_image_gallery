@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 # Set the working directory in the container
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt update && apt install -y ffmpeg
 
 # Copy requirements to the container
 COPY requirements.txt .
