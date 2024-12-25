@@ -46,7 +46,7 @@ def image_gallery():
     # Generate thumbnails for the current page if they don't exist
     generate_thumbnails(current_images)
 
-    return render_template('index.html', current_thumbnails, total_pages=total_pages, page=page)
+    return render_template('index.html', current_thumbnails=current_thumbnails, total_pages=total_pages, page=page)
 
 def generate_thumbnails(file_list):
     for file in file_list:
