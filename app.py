@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request
 from PIL import Image, ImageFilter
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 
 app = Flask(__name__)
 
