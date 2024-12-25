@@ -57,7 +57,7 @@ def generate_thumbnails(file_list):
                 # Check if the file is an image or a video (by extension)
                 if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
                     # Handle image files, including '.webp'
-                    original_image = Image.open(os.path.join(image_dir, file))
+                    original_image = Image.open(os.path.join(file_dir, file))
                     max_width = 200  # Define your thumbnail dimensions
                     max_height = 200
                     original_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
