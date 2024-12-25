@@ -20,7 +20,7 @@ def delete_files():
 
         # Delete files from the file system
         for filename in files_to_delete:
-            file_path = os.path.join('path/to/output/images', filename)
+            file_path = os.path.join(file_dir, filename)
             if os.path.exists(file_path):
                 os.remove(file_path)
 
