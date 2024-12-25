@@ -60,7 +60,7 @@ def generate_thumbnails(file_list):
                     original_image = Image.open(os.path.join(file_dir, file))
                     max_width = 200  # Define your thumbnail dimensions
                     max_height = 200
-                    original_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
+                    original_image.thumbnail((max_width, max_height), Image.LANCZOS)
                     original_image.save(thumbnail_path)
                 elif file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')):
                     # Handle video files, including '.webm' and '.mp5'
