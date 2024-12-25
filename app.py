@@ -11,6 +11,22 @@ file_dir = 'static/images/output'
 # Define the directory where thumbnails will be stored
 thumbnail_dir = 'static/thumbnails'
 
+@app.route('/delete-files', methods=['POST'])
+def delete_files():
+    try:
+        # Get file list from the request
+        data = request.get_json()
+        files_to_delete = data.get('files', [])
+
+        # Delete files from the file system
+        for filename in files_to_delete:
+            file_path = os.path.join('path/to/output/images', filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+        return jsonify({'message': 'Selected files have been deleted successfully.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 @app.route('/')
 def image_gallery():
     # Get a list of image files from the specified directory

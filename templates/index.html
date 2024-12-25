@@ -14,6 +14,7 @@
     <ul class="image-list">
         {% for img, thumbnail in current_thumbnails %}
             <li>
+                <input type="checkbox" class="file-checkbox" data-filename="{{ img }}">
                 <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
                     <div class="thumbnail">
                         <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
@@ -22,6 +23,7 @@
             </li>
         {% endfor %}
     </ul>
+    <button id="delete-selected" class="delete-button">Delete Selected</button>
     <div class="pagination">
         {% if page > 1 %}
             <a href="?page=1">&laquo; First</a>
@@ -41,4 +43,40 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
 </body>
+    <script>
+           $(document).ready(function () {
+               $('#delete-selected').click(function () {
+                   // Collect filenames of selected checkboxes
+                   const selectedFiles = [];
+                   $('.file-checkbox:checked').each(function () {
+                       selectedFiles.push($(this).data('filename'));
+                   });
+
+                   if (selectedFiles.length === 0) {
+                       alert('Please select at least one file to delete.');
+                       return;
+                   }
+
+                   // Confirm delete action
+                   if (!confirm('Are you sure you want to delete the selected files?')) {
+                       return;
+                   }
+
+                   // Send delete request to the server
+                   $.ajax({
+                       url: '/delete-files',
+                       method: 'POST',
+                       contentType: 'application/json',
+                       data: JSON.stringify({ files: selectedFiles }),
+                       success: function (response) {
+                           alert(response.message);
+                           location.reload(); // Reload the page
+                       },
+                       error: function (xhr, status, error) {
+                           alert('An error occurred: ' + xhr.responseText);
+                       }
+                   });
+               });
+           });
+    </script>
 </html>
