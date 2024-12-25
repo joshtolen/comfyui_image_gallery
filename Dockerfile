@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 # Set the working directory in the container
 WORKDIR /app
 
-RUN apk update && apk add -y ffmpeg
+RUN apk add --update ffmpeg
 
 # Copy requirements to the container
 COPY requirements.txt .
