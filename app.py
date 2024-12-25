@@ -50,7 +50,7 @@ def image_gallery():
 def generate_thumbnails(file_list):
     for file in file_list:
         # Create a consistent naming convention for thumbnail files
-        thumbnail_path = os.path.join(thumbnail_dir, f"{os.path.splitext(file)[0]}_thumbnail.jpg")
+        thumbnail_path = os.path.join(thumbnail_dir, f"{os.path.splitext(file)[0]}_thumbnail.png")
 
         if not os.path.exists(thumbnail_path):
             try:
