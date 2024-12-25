@@ -6,10 +6,10 @@ from moviepy import VideoFileClip
 app = Flask(__name__)
 
 # Define the directory where your original images are stored
-file_dir = 'static/images/output'
+file_dir = '/app/static/images/output'
 
 # Define the directory where thumbnails will be stored
-thumbnail_dir = 'static/thumbnails'
+thumbnail_dir = '/app/static/thumbnails'
 
 @app.route('/delete-files', methods=['POST'])
 def delete_files():
