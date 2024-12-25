@@ -16,7 +16,7 @@ def image_gallery():
     # Get a list of image files from the specified directory
     image_files = [f for f in os.listdir(file_dir) if f.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))]
     # Sort the list of image files by last modified date (newest first)
-    image_files.sort(key=lambda x: os.path.getmtime(os.path.join(image_dir, x)), reverse=True)
+    image_files.sort(key=lambda x: os.path.getmtime(os.path.join(file_dir, x)), reverse=True)
 
     # Get the page number from the query string (default to 1)
     page = int(request.args.get('page', 1))
