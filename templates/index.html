@@ -16,13 +16,20 @@
         {% for img, thumbnail in current_thumbnails %}
             <li>
                 <div class="thumbnail">
-                    <!-- Individual checkbox -->
+                    <!-- Checkbox -->
                     <input type="checkbox" class="file-checkbox" data-filename="{{ img }}">
-                    <!-- Trash can icon -->
+
+                    <!-- Trash icon -->
                     <div class="trash-icon" data-filename="{{ img }}">
-                        &#128465; <!-- Unicode for trash can icon or use an icon font class -->
+                        &#128465; <!-- Unicode for trash can -->
                     </div>
-                    <!-- Thumbnail itself -->
+
+                    <!-- Information button -->
+                    <div class="info-icon" data-filename="{{ img }}" data-type="image/jpeg" data-size="123 KB">
+                        &#9432; <!-- Unicode for "information" icon -->
+                    </div>
+
+                    <!-- Thumbnail image -->
                     <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
                         <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
                     </a>
@@ -43,6 +50,16 @@
             <a href="?page={{ total_pages }}">Last &raquo;</a>
         {% endif %}
     </div>
+    <div id="info-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <!-- Close button -->
+            <span class="close-modal">&times;</span>
+            <h2>File Information</h2>
+            <p><strong>Filename:</strong> <span id="file-name"></span></p>
+            <p><strong>Type:</strong> <span id="file-type"></span></p>
+            <p><strong>Size:</strong> <span id="file-size"></span></p>
+        </div>
+    </div>
     <footer class="footer">
     All images are copyrighted &#169; 2023
     </footer>
@@ -50,6 +67,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
 </body>
     <script>
+        $(document).ready(function () {
+            // Info button click event
+            $('.info-icon').click(function () {
+                // Get file details from the data attributes
+                const fileName = $(this).data('filename');
+                const fileType = $(this).data('type');
+                const fileSize = $(this).data('size');
+
+                // Populate the modal with details
+                $('#file-name').text(fileName);
+                $('#file-type').text(fileType);
+                $('#file-size').text(fileSize);
+
+                // Show the modal
+                $('#info-modal').fadeIn();
+            });
+
+            // Close button logic
+            $('.close-modal').click(function () {
+                $('#info-modal').fadeOut();
+            });
+
+            // Close modal when clicking outside the modal content
+            $(window).click(function (event) {
+                if ($(event.target).closest('.modal-content').length === 0 && $(event.target).is('.modal')) {
+                    $('#info-modal').fadeOut();
+                }
+            });
+        });
         $(document).ready(function () {
             // Functionality for "Delete Selected" button
             $('#delete-selected').click(function () {
