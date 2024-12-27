@@ -238,6 +238,32 @@ body {
     color: red; /* Red hover effect */
 }
 
+/* Download icon inside the thumbnail */
+.download-icon {
+    position: absolute;
+    bottom: 10px; /* Position near the bottom */
+    right: 10px; /* Position near the right */
+    z-index: 11; /* Ensure it is above the image */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    padding: 5px; /* Add padding around the icon */
+    border-radius: 50%; /* Circular icon container */
+    cursor: pointer; /* Pointer for interactivity */
+    color: #fff; /* White icon color */
+    font-size: 18px; /* Adjust icon size */
+    display: flex; /* Center text inside the circle */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    opacity: 0.8; /* Slight transparency */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+/* Hover effect for download icon */
+.download-icon:hover {
+    background-color: rgba(255, 255, 255, 0.8); /* Lighter background on hover */
+    color: #000; /* Change icon color to black on hover */
+    transform: scale(1.2); /* Slight scale effect */
+}
+
 /* Hide the gallery title */
 .gallery-title {
     display: none;

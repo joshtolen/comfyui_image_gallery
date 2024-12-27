@@ -29,6 +29,10 @@
                         &#9432; <!-- Unicode for "information" icon -->
                     </div>
 
+                    <div class="download-icon" data-download-url="{{ url_for('static', filename='images/output/' + img) }}">
+                        &#8681; <!-- Unicode for download arrow -->
+                    </div>
+
                     <!-- Thumbnail image -->
                     <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
                         <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
@@ -94,6 +98,21 @@
                 if ($(event.target).closest('.modal-content').length === 0 && $(event.target).is('.modal')) {
                     $('#info-modal').fadeOut();
                 }
+            });
+        });
+        $(document).ready(function () {
+            // Handle click on the download icon
+            $('.download-icon').click(function () {
+                // Get the download URL from the data attribute
+                const downloadUrl = $(this).data('download-url');
+
+                // Create a temporary anchor element to download the file
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = ''; // Suggests to download with its original name from the server
+                document.body.appendChild(link); // Append the link temporarily
+                link.click(); // Trigger the download
+                document.body.removeChild(link); // Remove the link afterward
             });
         });
         $(document).ready(function () {
