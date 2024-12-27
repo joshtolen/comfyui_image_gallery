@@ -24,6 +24,7 @@ def delete_files():
             thumbnail_path = os.path.join(thumbnail_dir, f"{os.path.splitext(filename)[0]}_thumbnail.png")
             if os.path.exists(file_path):
                 os.remove(file_path)
+            if os.path.exists(thumbnail_path):
                 os.remove(thumbnail_path)
 
         return jsonify({'message': 'Selected files have been deleted successfully.'})

@@ -11,19 +11,25 @@
             <img class="logo" src="{{ url_for('static', filename='logo.png') }}" alt="ComfyUI Logo">
         </div>
     </header>
+    <button id="delete-selected" class="delete-button">Delete Selected</button>
     <ul class="image-list">
         {% for img, thumbnail in current_thumbnails %}
             <li>
-                <input type="checkbox" class="file-checkbox" data-filename="{{ img }}">
-                <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
-                    <div class="thumbnail">
-                        <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
+                <div class="thumbnail">
+                    <!-- Individual checkbox -->
+                    <input type="checkbox" class="file-checkbox" data-filename="{{ img }}">
+                    <!-- Trash can icon -->
+                    <div class="trash-icon" data-filename="{{ img }}">
+                        &#128465; <!-- Unicode for trash can icon or use an icon font class -->
                     </div>
-                </a>
+                    <!-- Thumbnail itself -->
+                    <a data-fancybox="gallery" href="{{ url_for('static', filename='images/output/' + img) }}">
+                        <img src="{{ url_for('static', filename='thumbnails/' + thumbnail) }}" alt="{{ thumbnail }}">
+                    </a>
+                </div>
             </li>
         {% endfor %}
     </ul>
-    <button id="delete-selected" class="delete-button">Delete Selected</button>
     <div class="pagination">
         {% if page > 1 %}
             <a href="?page=1">&laquo; First</a>
@@ -44,39 +50,59 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
 </body>
     <script>
-           $(document).ready(function () {
-               $('#delete-selected').click(function () {
-                   // Collect filenames of selected checkboxes
-                   const selectedFiles = [];
-                   $('.file-checkbox:checked').each(function () {
-                       selectedFiles.push($(this).data('filename'));
-                   });
+        $(document).ready(function () {
+            // Functionality for "Delete Selected" button
+            $('#delete-selected').click(function () {
+                const selectedFiles = [];
+                $('.file-checkbox:checked').each(function () {
+                    selectedFiles.push($(this).data('filename'));
+                });
 
-                   if (selectedFiles.length === 0) {
-                       alert('Please select at least one file to delete.');
-                       return;
-                   }
+                if (selectedFiles.length === 0) {
+                    alert('Please select at least one file to delete.');
+                    return;
+                }
 
-                   // Confirm delete action
-                   if (!confirm('Are you sure you want to delete the selected files?')) {
-                       return;
-                   }
+                if (!confirm('Are you sure you want to delete the selected files?')) {
+                    return;
+                }
 
-                   // Send delete request to the server
-                   $.ajax({
-                       url: '/delete-files',
-                       method: 'POST',
-                       contentType: 'application/json',
-                       data: JSON.stringify({ files: selectedFiles }),
-                       success: function (response) {
-                           alert(response.message);
-                           location.reload(); // Reload the page
-                       },
-                       error: function (xhr, status, error) {
-                           alert('An error occurred: ' + xhr.responseText);
-                       }
-                   });
-               });
-           });
+                $.ajax({
+                    url: '/delete-files',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ files: selectedFiles }),
+                    success: function (response) {
+                        alert(response.message);
+                        location.reload();
+                    },
+                    error: function (xhr, status, error) {
+                        alert('An error occurred: ' + xhr.responseText);
+                    }
+                });
+            });
+
+            // Functionality for individual trash icons
+            $('.trash-icon').click(function () {
+                const filename = $(this).data('filename');
+                if (!confirm('Are you sure you want to delete this file?')) {
+                    return;
+                }
+
+                $.ajax({
+                    url: '/delete-file',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ file: filename }),
+                    success: function (response) {
+                        alert(response.message);
+                        location.reload();
+                    },
+                    error: function (xhr, status, error) {
+                        alert('An error occurred: ' + xhr.responseText);
+                    }
+                });
+            });
+        });
     </script>
 </html>
