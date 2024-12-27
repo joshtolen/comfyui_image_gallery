@@ -25,7 +25,11 @@
                     </div>
 
                     <!-- Information button -->
-                    <div class="info-icon" data-filename="{{ img }}" data-type="image/jpeg" data-size="123 KB">
+                    <div class="info-icon"
+                         data-filename="{{ img }}"
+                         data-type="image/jpeg"
+                         data-size="123 KB"
+                         data-source="{{ url_for('static', filename='images/output/' + img) }}">
                         &#9432; <!-- Unicode for "information" icon -->
                     </div>
 
@@ -72,23 +76,27 @@
 </body>
     <script>
         $(document).ready(function () {
-            // Info button click event
+            // Handle click on the info icon
             $('.info-icon').click(function () {
                 // Get file details from the data attributes
-                const fileName = $(this).data('filename');
-                const fileType = $(this).data('type');
-                const fileSize = $(this).data('size');
+                const fileName = $(this).data('filename'); // File name
+                const fileType = $(this).data('type'); // File type
+                const fileSize = $(this).data('size'); // File size
+                const fileSource = $(this).data('source'); // Source file URL (not thumbnail)
 
-                // Populate the modal with details
+                // Populate and display the modal with details
                 $('#file-name').text(fileName);
                 $('#file-type').text(fileType);
                 $('#file-size').text(fileSize);
+
+                // Optional: Display the source file URL in the modal (for debugging or linking)
+                // $('#file-source').text(fileSource).attr('href', fileSource);
 
                 // Show the modal
                 $('#info-modal').fadeIn();
             });
 
-            // Close button logic
+            // Close the modal
             $('.close-modal').click(function () {
                 $('#info-modal').fadeOut();
             });
@@ -99,17 +107,16 @@
                     $('#info-modal').fadeOut();
                 }
             });
-        });
-        $(document).ready(function () {
+
             // Handle click on the download icon
             $('.download-icon').click(function () {
-                // Get the download URL from the data attribute
+                // Get the download URL for the source file
                 const downloadUrl = $(this).data('download-url');
 
                 // Create a temporary anchor element to download the file
                 const link = document.createElement('a');
                 link.href = downloadUrl;
-                link.download = ''; // Suggests to download with its original name from the server
+                link.download = ''; // Suggest downloading the file with its original name from the server
                 document.body.appendChild(link); // Append the link temporarily
                 link.click(); // Trigger the download
                 document.body.removeChild(link); // Remove the link afterward
