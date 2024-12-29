@@ -8,7 +8,7 @@ app = Flask(__name__)
 # Define the directory where your original images are stored
 file_dir = '/app/static/images/output'
 
-# Define the directory where thumbnails will be stored
+# Define the directory where thumbnails will be store
 thumbnail_dir = '/app/static/thumbnails'
 
 @app.route('/delete-files', methods=['POST'])
@@ -81,7 +81,7 @@ def generate_thumbnails(file_list):
                     original_image = Image.open(os.path.join(file_dir, file))
                     max_width = 200  # Define your thumbnail dimensions
                     max_height = 200
-                    original_image.thumbnail((max_width, max_height), Image.LANCZOS)
+                    original_image.thumbnail((max_width, max_height))
                     original_image.save(thumbnail_path)
                 elif file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')):
                     # Handle video files, including '.webm' and '.mp5'
@@ -94,7 +94,7 @@ def generate_thumbnails(file_list):
                         # Resize the frame for a thumbnail
                         max_width = 200
                         max_height = 200
-                        thumbnail_image.thumbnail((max_width, max_height), Image.ANTIALIAS)
+                        thumbnail_image.thumbnail((max_width, max_height))
                         thumbnail_image.save(thumbnail_path)
             except Exception as e:
                 print(f"Error generating thumbnail for {file}: {str(e)}")
