@@ -141,15 +141,27 @@ def image_gallery():
     # Get user preference for theme
     theme = request.cookies.get('theme', 'dark')
     
-    # Get a list of image files from the specified directory
+    # Get file type filter from query string (default to 'all')
+    file_type = request.args.get('type', 'all')
+    
+    # Get a list of all supported files from the specified directory
     try:
-        image_files = [f for f in os.listdir(file_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))]
+        all_files = [f for f in os.listdir(file_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))]
     except FileNotFoundError:
         # Create the directory if it doesn't exist
         os.makedirs(file_dir, exist_ok=True)
-        image_files = []
+        all_files = []
     
-    # Sort the list of image files by last modified date (newest first)
+    # Filter files based on selected type
+    if file_type == 'images':
+        image_files = [f for f in all_files if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp')) and not f.lower().endswith('.webp.mp4')]
+    elif file_type == 'videos':
+        image_files = [f for f in all_files if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or f.lower().endswith('.webp.mp4')]
+    else:
+        # Default: show all files
+        image_files = all_files
+    
+    # Sort the list of files by last modified date (newest first)
     if image_files:
         image_files.sort(key=lambda x: os.path.getmtime(os.path.join(file_dir, x)), reverse=True)
 
@@ -188,12 +200,20 @@ def image_gallery():
         # Detect if it's a video
         is_video = img.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))
         
+        # Handle original source for display/playback
+        # If it's a .webp that should be a video (converted to .webp.mp4), use the MP4
+        file_source = img
+        if img.lower().endswith('.webp') and os.path.exists(os.path.join(file_dir, img + '.mp4')):
+            file_source = img + '.mp4'
+            is_video = True
+        
         image_data.append({
             'filename': img,
             'thumbnail': thumb,
             'type': mime_type or ('video/mp4' if is_video else 'image/jpeg'),
             'size': size_text,
-            'is_video': is_video
+            'is_video': is_video,
+            'source': file_source
         })
 
     # Queue thumbnails for background generation
@@ -206,12 +226,20 @@ def image_gallery():
         if thumbnail_queue and not is_processing:
             start_thumbnail_processor()
     
+    # Get counts for tab display
+    image_count = len([f for f in all_files if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp')) and not f.lower().endswith('.webp.mp4')])
+    video_count = len([f for f in all_files if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or f.lower().endswith('.webp.mp4')])
+    
     # Make response with cache headers for 5 minutes
     response = make_response(render_template('index.html', 
                                            images=image_data,
                                            total_pages=total_pages, 
                                            page=page,
-                                           theme=theme))
+                                           theme=theme,
+                                           file_type=file_type,
+                                           image_count=image_count,
+                                           video_count=video_count,
+                                           total_count=len(all_files)))
     
     # Set a shorter cache time for the main page (5 minutes)
     response.headers['Cache-Control'] = 'public, max-age=300'
@@ -246,6 +274,72 @@ def thumbnail_exists(filename):
     png_path = os.path.join(thumbnail_dir, f"{base_name}_thumbnail.png")
     return os.path.exists(webp_path) or os.path.exists(png_path)
 
+def convert_webp_to_mp4(file_path):
+    """Convert a WebP animation file to MP4 video format"""
+    mp4_path = file_path + '.mp4'
+    
+    # Skip if the MP4 already exists
+    if os.path.exists(mp4_path):
+        return mp4_path
+        
+    try:
+        # Check if it's actually an animated WebP by trying to open it with PIL
+        with Image.open(file_path) as img:
+            # If it has more than one frame, it's probably an animation
+            is_animated = hasattr(img, 'n_frames') and img.n_frames > 1
+            if not is_animated:
+                # Not an animation, no need to convert
+                return None
+
+        # Convert WebP to MP4 using MoviePy
+        # First create a temporary folder for the frames
+        import tempfile
+        import shutil
+        from moviepy.editor import ImageSequenceClip
+        
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            # Extract frames from WebP
+            # We'll use PIL to extract frames and save them as PNG
+            with Image.open(file_path) as img:
+                frame_count = getattr(img, 'n_frames', 1)
+                
+                # Extract each frame
+                frames = []
+                for i in range(frame_count):
+                    img.seek(i)
+                    frame_path = os.path.join(temp_dir, f"frame_{i:04d}.png")
+                    rgb_frame = img.convert('RGB')
+                    rgb_frame.save(frame_path)
+                    frames.append(frame_path)
+                
+                # Get the duration of each frame (default to 1/24 seconds if not available)
+                try:
+                    durations = []
+                    for i in range(frame_count):
+                        img.seek(i)
+                        duration_ms = img.info.get('duration', 41)  # Default to ~24fps
+                        durations.append(duration_ms / 1000.0)  # Convert to seconds
+                except Exception:
+                    durations = [1/24] * frame_count
+                
+                # Create a video from the frames
+                if frames:
+                    clip = ImageSequenceClip(frames, durations=durations)
+                    clip.write_videofile(mp4_path, codec='libx264', fps=24, 
+                                       audio=False, logger=None, verbose=False)
+                    
+                return mp4_path
+                
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+                
+    except Exception as e:
+        print(f"Error converting WebP to MP4: {str(e)}")
+        return None
+
 def generate_thumbnail(file):
     """Generate a thumbnail for a single file, optimized for WebP format"""
     # Create a consistent naming convention for thumbnail files
@@ -264,8 +358,8 @@ def generate_thumbnail(file):
             return None
             
         # Check if the file is an image or a video (by extension)
-        if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
-            # Handle image files
+        if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif')):
+            # Handle regular image files
             with Image.open(file_path) as original_image:
                 # Create blank canvas to ensure square thumbnails
                 max_size = 200
@@ -295,6 +389,70 @@ def generate_thumbnail(file):
                 
                 # Save as WebP with enhanced quality
                 thumb.save(thumbnail_path, 'WEBP', quality=85)
+        
+        elif file.lower().endswith('.webp'):
+            # Special handling for WebP: check if it's animated
+            try:
+                with Image.open(file_path) as webp_img:
+                    # Check if it has animation frames
+                    is_animated = hasattr(webp_img, 'n_frames') and webp_img.n_frames > 1
+                    
+                    if is_animated:
+                        # Convert animated WebP to MP4 in the background
+                        # We don't want to block thumbnail generation
+                        convert_thread = threading.Thread(
+                            target=convert_webp_to_mp4,
+                            args=(file_path,)
+                        )
+                        convert_thread.daemon = True
+                        convert_thread.start()
+                        
+                        # For animated WebP, extract the first frame for thumbnail
+                        webp_img.seek(0)
+                        # Create the thumbnail
+                        max_size = 200
+                        webp_img.thumbnail((max_size, max_size))
+                        
+                        # Save as WebP
+                        webp_img.save(thumbnail_path, 'WEBP', quality=80)
+                    else:
+                        # Regular WebP image (non-animated)
+                        with Image.open(file_path) as original_image:
+                            # Create blank canvas to ensure square thumbnails
+                            max_size = 200
+                            thumb = Image.new('RGBA', (max_size, max_size), (0, 0, 0, 0))
+                            
+                            # Resize maintaining aspect ratio
+                            original_image.thumbnail((max_size, max_size))
+                            
+                            # Center the image on the canvas
+                            offset = ((max_size - original_image.width) // 2,
+                                    (max_size - original_image.height) // 2)
+                            
+                            # Handle images without alpha channel
+                            if original_image.mode != 'RGBA' and original_image.mode != 'LA':
+                                if original_image.mode != 'RGB':
+                                    original_image = original_image.convert('RGB')
+                            else:
+                                thumb = Image.new('RGBA', (max_size, max_size), (0, 0, 0, 0))
+                            
+                            # Paste the resized image onto the center of the canvas
+                            if 'A' in original_image.mode:
+                                thumb.paste(original_image, offset, original_image)
+                            else:
+                                # For non-transparent images, create a background
+                                thumb = Image.new('RGB', (max_size, max_size), (30, 30, 30))
+                                thumb.paste(original_image, offset)
+                            
+                            # Save as WebP with enhanced quality
+                            thumb.save(thumbnail_path, 'WEBP', quality=85)
+            except Exception as webp_error:
+                print(f"WebP processing error for {file}: {str(webp_error)}")
+                # Fall back to regular image handling
+                with Image.open(file_path) as original_image:
+                    max_size = 200
+                    original_image.thumbnail((max_size, max_size))
+                    original_image.save(thumbnail_path, 'WEBP', quality=85)
                 
         elif file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')):
             # Handle video files
