@@ -83,8 +83,8 @@
                         
                         <!-- Responsive image with lazy loading -->
                         <img 
-                            src="{{ url_for('serve-thumbnail', filename=image.thumbnail) }}"
-                            data-src="{{ url_for('serve-thumbnail', filename=image.thumbnail) }}"
+                            src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
+                            data-src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
                             alt="{{ image.filename }}"
                             loading="lazy"
                             class="thumbnail-img{% if not thumbnail_exists %} placeholder{% endif %}"
