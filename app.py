@@ -18,7 +18,7 @@ file_dir = '/app/static/images/output'
 thumbnail_dir = '/app/static/thumbnails'
 
 # Define directory for archived files (converted WebPs)
-archive_dir = '/app/static/images/archive'
+archive_dir = '/app/static/images/output/archive'
 
 # Ensure the thumbnail and archive directories exist
 os.makedirs(thumbnail_dir, exist_ok=True)
@@ -221,7 +221,27 @@ def image_gallery():
     if image_files:
         def get_file_time(filename):
             file_path = os.path.join(file_dir, filename)
-            # Try to get creation time first, fall back to modified time
+            
+            # For MP4 files converted from WebP, check if the original WebP exists in archive
+            if filename.lower().endswith('.mp4'):
+                # Check if this might be a converted WebP
+                webp_name = filename[:-4]  # Remove .mp4 extension
+                if webp_name.lower().endswith('.webp'):
+                    # Check if original WebP is in archive
+                    archive_path = os.path.join(archive_dir, webp_name)
+                    if os.path.exists(archive_path):
+                        print(f"Using archived WebP timestamp for: {filename}")
+                        try:
+                            # Use the archived WebP's timestamp
+                            stats = os.stat(archive_path)
+                            if hasattr(stats, 'st_birthtime'):  # macOS
+                                return stats.st_birthtime
+                            else:  # Linux/Windows fallback
+                                return stats.st_mtime
+                        except Exception as e:
+                            print(f"Error getting archived WebP time: {str(e)}")
+            
+            # Standard file time logic for non-converted files
             try:
                 # st_birthtime is available on macOS, not on Linux
                 # st_ctime on Linux is inode change time, not creation time
@@ -231,8 +251,9 @@ def image_gallery():
                     return stats.st_birthtime
                 else:  # Linux/Windows fallback
                     return stats.st_mtime
-            except:
+            except Exception as e:
                 # Fallback to modification time if there's an error
+                print(f"Error getting file time for {filename}: {str(e)}")
                 return os.path.getmtime(file_path)
                 
         image_files.sort(key=get_file_time, reverse=True)
@@ -548,6 +569,17 @@ def convert_webp_to_mp4(file_path):
                         clip.write_videofile(mp4_path, codec='libx264', fps=24, 
                                            audio=False, logger=None)
                         print(f"Successfully encoded video to {mp4_path}")
+                        
+                        # Copy file timestamps from the original WebP to the MP4
+                        try:
+                            # Get the original file's timestamps
+                            webp_stats = os.stat(file_path)
+                            # Set the same access/modification times on the new file
+                            os.utime(mp4_path, (webp_stats.st_atime, webp_stats.st_mtime))
+                            print(f"Copied timestamps from WebP to MP4 file")
+                        except Exception as e:
+                            print(f"Error copying timestamps: {str(e)}")
+                            
                     except Exception as e:
                         print(f"Error during video encoding: {str(e)}")
                         raise
