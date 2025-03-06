@@ -93,7 +93,13 @@
                         data-source="{{ url_for('static', filename='images/output/' + image.source) }}"
                         data-is-video="true">
                         
-                        <div class="video-indicator">▶️</div>
+                        <div class="video-indicator">
+                            {% if image.is_converted_webp %}
+                            🔄 <!-- Indicator for converted WebP -->
+                            {% else %}
+                            ▶️ <!-- Regular video indicator -->
+                            {% endif %}
+                        </div>
                         
                         <!-- Responsive image with lazy loading -->
                         <img 

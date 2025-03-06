@@ -17,8 +17,12 @@ file_dir = '/app/static/images/output'
 # Define the directory where thumbnails will be stored
 thumbnail_dir = '/app/static/thumbnails'
 
-# Ensure the thumbnail directory exists
+# Define directory for archived files (converted WebPs)
+archive_dir = '/app/static/images/archive'
+
+# Ensure the thumbnail and archive directories exist
 os.makedirs(thumbnail_dir, exist_ok=True)
+os.makedirs(archive_dir, exist_ok=True)
 
 # Set up caching - 1 week in seconds
 CACHE_DURATION = 604800
@@ -162,7 +166,20 @@ def image_gallery():
     
     # Get a list of all supported files from the specified directory
     try:
-        all_files = [f for f in os.listdir(file_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))]
+        # Get list of files but exclude those in the archive directory
+        archive_files = set()
+        if os.path.exists(archive_dir):
+            try:
+                archive_files = set(os.listdir(archive_dir))
+                print(f"Found {len(archive_files)} files in archive directory")
+            except Exception as e:
+                print(f"Error reading archive directory: {str(e)}")
+                
+        # Only include files that aren't in the archive directory
+        all_files = [f for f in os.listdir(file_dir) 
+                     if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5'))
+                     and f not in archive_files]
+        print(f"Found {len(all_files)} files in main directory (excluding archived files)")
     except FileNotFoundError:
         # Create the directory if it doesn't exist
         os.makedirs(file_dir, exist_ok=True)
@@ -246,13 +263,27 @@ def image_gallery():
             file_source = img + '.mp4'
             is_video = True
         
+        # Check if this is a converted WebP
+        is_converted_webp = False
+        if is_video and file_source.lower().endswith('.mp4') and img.lower().endswith('.webp'):
+            is_converted_webp = True
+            print(f"Marking as converted WebP in UI: {img}")
+        
+        # Check if original WebP is in archive
+        in_archive = False
+        if is_converted_webp:
+            archive_path = os.path.join(archive_dir, img)
+            in_archive = os.path.exists(archive_path)
+        
         image_data.append({
             'filename': img,
             'thumbnail': thumb,
             'type': mime_type or ('video/mp4' if is_video else 'image/jpeg'),
             'size': size_text,
             'is_video': is_video,
-            'source': file_source
+            'source': file_source,
+            'is_converted_webp': is_converted_webp,
+            'in_archive': in_archive
         })
 
     # Queue thumbnails for background generation
@@ -313,6 +344,22 @@ def serve_thumbnail(filename):
     response = send_from_directory(thumbnail_dir, filename)
     return add_cache_headers(response)
     
+@app.route('/check-file-status/<path:filename>')
+def check_file_status(filename):
+    """Check if a file exists, has been archived, or converted to MP4"""
+    original_path = os.path.join(file_dir, filename)
+    archive_path = os.path.join(archive_dir, filename)
+    mp4_path = os.path.join(file_dir, filename + '.mp4')
+    
+    result = {
+        "filename": filename,
+        "exists_in_original": os.path.exists(original_path),
+        "exists_in_archive": os.path.exists(archive_path),
+        "exists_as_mp4": os.path.exists(mp4_path)
+    }
+    
+    return jsonify(result)
+    
 @app.route('/conversion-progress/<path:filename>')
 def conversion_progress(filename):
     """Get the progress of WebP to MP4 conversion"""
@@ -330,16 +377,21 @@ def conversion_progress(filename):
                 print(f"Progress data: {data}")
                 return jsonify(data)
         else:
-            # Check if MP4 already exists
+            # Check if MP4 already exists or WebP is in archive
             mp4_path = os.path.join(file_dir, filename + '.mp4')
+            archive_path = os.path.join(archive_dir, filename)
+            
             print(f"No progress file, checking if MP4 exists: {mp4_path}")
-            if os.path.exists(mp4_path):
-                print(f"MP4 already exists: {mp4_path}")
+            print(f"Checking if file is in archive: {archive_path}")
+            
+            if os.path.exists(mp4_path) or os.path.exists(archive_path):
+                print(f"File is completed: MP4 exists={os.path.exists(mp4_path)}, Archive exists={os.path.exists(archive_path)}")
                 return jsonify({
                     "status": "completed", 
                     "progress": 100, 
                     "total": 100,
-                    "filename": filename
+                    "filename": filename,
+                    "archived": os.path.exists(archive_path)
                 })
             
             # Check if file is in queue
@@ -491,6 +543,20 @@ def convert_webp_to_mp4(file_path):
                         "total": 100,
                         "filename": os.path.basename(file_path)
                     }, f)
+                
+                # Archive the original WebP file (move it to archive directory)
+                try:
+                    import shutil
+                    webp_filename = os.path.basename(file_path)
+                    archive_path = os.path.join(archive_dir, webp_filename)
+                    print(f"Moving WebP file to archive: {file_path} -> {archive_path}")
+                    
+                    # Only move if archive directory exists and is different from source
+                    if os.path.exists(archive_dir) and os.path.dirname(file_path) != archive_dir:
+                        shutil.move(file_path, archive_path)
+                        print(f"Successfully archived WebP file to: {archive_path}")
+                except Exception as e:
+                    print(f"Error archiving WebP file: {str(e)}")
                     
                 return mp4_path
                 
@@ -644,6 +710,18 @@ def generate_thumbnail(file):
         elif file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')):
             # Handle video files
             try:
+                # Check if this is an MP4 that was converted from a WebP
+                is_converted_webp = False
+                if file.lower().endswith('.mp4'):
+                    webp_name = file[:-4]  # Remove .mp4 extension
+                    if webp_name.lower().endswith('.webp'):
+                        print(f"Found converted WebP->MP4 file: {file}")
+                        # Look for the WebP in the archive
+                        archive_webp_path = os.path.join(archive_dir, webp_name)
+                        if os.path.exists(archive_webp_path):
+                            print(f"Original WebP file is in archive: {archive_webp_path}")
+                        is_converted_webp = True
+                
                 video_path = os.path.join(file_dir, file)
                 with VideoFileClip(video_path) as video:
                     # Get video duration
