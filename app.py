@@ -477,7 +477,7 @@ def convert_webp_to_mp4(file_path):
                         clip = ImageSequenceClip(frames, durations=durations)
                         print(f"Starting video encoding to {mp4_path}")
                         clip.write_videofile(mp4_path, codec='libx264', fps=24, 
-                                           audio=False, logger=None, verbose=True,
+                                           audio=False, logger=None,
                                            progress_bar=False, callback=encoding_progress_callback)
                         print(f"Successfully encoded video to {mp4_path}")
                     except Exception as e:
