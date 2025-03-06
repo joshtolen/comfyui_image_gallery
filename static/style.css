@@ -1,278 +1,697 @@
-/* Reset some default styles */
-body, ul {
+/* Modern CSS with CSS variables */
+:root {
+    /* Colors - Dark Theme */
+    --color-bg-dark: #1a1a1a;
+    --color-text-dark: #ffffff;
+    --color-primary-dark: #6c5ce7;
+    --color-secondary-dark: #a29bfe;
+    --color-accent-dark: #00cec9;
+    --color-card-dark: #2d2d2d;
+    --color-modal-dark: #333333;
+    
+    /* Colors - Light Theme */
+    --color-bg-light: #f5f5f5;
+    --color-text-light: #333333;
+    --color-primary-light: #5352ed;
+    --color-secondary-light: #7b68ee;
+    --color-accent-light: #00b894;
+    --color-card-light: #ffffff;
+    --color-modal-light: #f0f0f0;
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-circle: 50%;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.5rem;
+    
+    /* Z-index layers */
+    --z-index-modal-backdrop: 900;
+    --z-index-modal: 1000;
+    --z-index-tooltip: 1100;
+    --z-index-dropdown: 1200;
+}
+
+/* Reset and base styles */
+*, *::before, *::after {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-/* Basic styles for the image gallery */
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
 body {
-    background-color: #333;
-    color: #fff;
-    font-family: Arial, sans-serif;
-}
-
-.gallery-title {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.image-list {
-    list-style: none;
+    font-family: var(--font-family);
+    line-height: 1.5;
+    transition: background-color var(--transition-medium), color var(--transition-medium);
+    overflow-x: hidden;
+    min-height: 100vh;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
 }
 
-.image-list li {
-    margin: 10px;
+/* Theme Styles */
+.dark-mode {
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-dark);
+}
+
+.light-mode {
+    background-color: var(--color-bg-light);
+    color: var(--color-text-light);
+}
+
+/* Header Styles */
+header {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode header {
+    background-color: var(--color-bg-dark);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.light-mode header {
+    background-color: var(--color-bg-light);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: var(--spacing-md);
+}
+
+.logo-container {
+    flex: 1;
     text-align: center;
 }
 
-/* Style for thumbnails */
-.thumbnail {
-    position: relative;
-    overflow: hidden;
-    width: 200px; /* Adjust as needed */
-    height: 200px; /* Adjust as needed */
-    cursor: pointer;
-    border-radius: 5px;
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Added box-shadow transition */
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Shadow properties */
+.logo {
+    max-width: 300px;
+    height: auto;
+    transition: transform var(--transition-medium);
 }
 
+.logo:hover {
+    transform: scale(1.03);
+}
+
+.controls {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+/* Button Styles */
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+    background: none;
+    outline: none;
+}
+
+.delete-button {
+    background-color: #e74c3c;
+    color: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+.delete-button:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.theme-toggle {
+    background-color: transparent;
+    border: 1px solid;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+}
+
+.dark-mode .theme-toggle {
+    border-color: var(--color-accent-dark);
+    color: var(--color-accent-dark);
+}
+
+.light-mode .theme-toggle {
+    border-color: var(--color-accent-light);
+    color: var(--color-accent-light);
+}
+
+.theme-toggle:hover {
+    transform: rotate(15deg) scale(1.1);
+}
+
+/* Loading Indicator */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    width: 100%;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--color-primary-dark);
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: var(--spacing-md);
+}
+
+.light-mode .loading-spinner {
+    border: 5px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--color-primary-light);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Gallery Grid Layout */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-lg);
+    padding: var(--spacing-xl);
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.gallery-item {
+    display: flex;
+    justify-content: center;
+    transition: transform var(--transition-fast);
+}
+
+.image-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-medium), box-shadow var(--transition-medium);
+}
+
+.dark-mode .image-card {
+    background-color: var(--color-card-dark);
+}
+
+.light-mode .image-card {
+    background-color: var(--color-card-light);
+}
+
+.image-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+}
+
+/* File Checkbox */
 .file-checkbox {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
     z-index: 10;
-    transform: scale(1.5);
+    transform: scale(1.2);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
 }
 
-#delete-selected {
-    display: block;
-    margin: 20px auto; /* Center the button horizontally */
-    padding: 10px 20px; /* Add padding for better appearance */
-    font-size: 16px; /* Make the text larger */
-    background-color: #444; /* Red background for delete button */
-    color: #fff; /* White text color */
-    border: 1px solid #fff; /* Remove border */
-    border-radius: 5px; /* Add rounded corners */
-    cursor: pointer; /* Change cursor to pointer */
-    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth hover effect */
+.file-checkbox:hover, .file-checkbox:checked {
+    opacity: 1;
 }
 
-#delete-selected:hover {
-    background-color: #fff; /* Invert colors on hover */
-    color: #444; /* Text color switches to dark theme on hover */
-    border-color: #444; /* Border matches the dark background */
-}
-
-/* Position the individual trash can icon inside thumbnails */
-.trash-icon {
+/* Card Actions */
+.card-actions {
     position: absolute;
-    top: 10px; /* Adjust to position near the top */
-    right: 10px; /* Adjust to position near the right */
-    z-index: 11; /* Make sure it is above the images */
-    background-color: rgba(0, 0, 0, 0.5); /* Slightly transparent background */
-    padding: 5px; /* Add some padding around the icon */
-    border-radius: 50%; /* Circular icon */
-    cursor: pointer; /* Show pointer on hover */
-    color: #fff; /* White icon color */
-    font-size: 18px; /* Adjust icon size */
-    display: flex; /* Center the icon inside its container */
-    align-items: center; /* Center vertically */
-    justify-content: center; /* Center horizontally */
-    visibility: hidden; /* Hidden by default (revealed on hover) */
-    transition: visibility 0.2s ease, opacity 0.2s ease;
-    opacity: 0; /* Initially invisible */
+    top: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
 }
 
-/* Hover effect for the thumbnail to reveal the trash can */
-.thumbnail:hover .trash-icon {
-    visibility: visible; /* Show icon on hover */
-    opacity: 1; /* Make the icon fully visible */
+.card-actions button {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-circle);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity var(--transition-fast), 
+                transform var(--transition-fast),
+                background-color var(--transition-fast);
 }
+
+.image-card:hover .card-actions button {
+    opacity: 0.8;
+    transform: translateX(0);
+}
+
+.card-actions button:nth-child(1) { transition-delay: 0s; }
+.card-actions button:nth-child(2) { transition-delay: 0.05s; }
+.card-actions button:nth-child(3) { transition-delay: 0.1s; }
 
 .trash-icon:hover {
-    background-color: rgba(255, 0, 0, 0.8); /* Brighter red on hover */
-}
-
-/* Info button inside the thumbnail */
-.info-icon {
-    position: absolute;
-    bottom: 10px; /* Position near the bottom */
-    left: 10px; /* Position near the left */
-    z-index: 11; /* Ensure it appears above the image */
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-    padding: 5px; /* Padding for spacing */
-    border-radius: 50%; /* Circular icon */
-    cursor: pointer; /* Pointer for interactivity */
-    color: #fff; /* White icon color */
-    font-size: 18px; /* Adjust icon size */
-    display: flex; /* Center text inside the circle */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    opacity: 0.8; /* Slight transparency */
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    background-color: rgba(231, 76, 60, 0.9) !important;
+    opacity: 1 !important;
 }
 
 .info-icon:hover {
-    background-color: rgba(255, 255, 255, 0.8); /* Lighter background on hover */
-    color: #000; /* Change icon color to black on hover */
-    transform: scale(1.2); /* Slight scale effect */
+    background-color: rgba(52, 152, 219, 0.9) !important;
+    opacity: 1 !important;
 }
 
-.thumbnail img {
+.download-icon:hover {
+    background-color: rgba(46, 204, 113, 0.9) !important;
+    opacity: 1 !important;
+}
+
+/* Gallery Link & Image */
+.gallery-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.thumbnail-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform var(--transition-slow);
 }
 
-.thumbnail:hover {
-    transform: scale(1.1);
-    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.4); /* Shadow properties on hover */
+.image-card:hover .thumbnail-img {
+    transform: scale(1.05);
 }
 
-/* Pagination styles */
+/* Placeholder */
+.placeholder-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.05) 25%, 
+        rgba(255, 255, 255, 0.15) 50%, 
+        rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    pointer-events: none;
+}
+
+.light-mode .placeholder-loading {
+    background: linear-gradient(90deg, 
+        rgba(0, 0, 0, 0.03) 25%, 
+        rgba(0, 0, 0, 0.07) 50%, 
+        rgba(0, 0, 0, 0.03) 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+    to { background-position: -200% 0; }
+}
+
+/* Video Indicator */
+.video-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    z-index: 5;
+    opacity: 0.7;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}
+
+/* Filename Display */
+.filename-display {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity var(--transition-fast),
+                transform var(--transition-fast);
+}
+
+.image-card:hover .filename-display {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Pagination */
 .pagination {
-    text-align: center;
-    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    margin: var(--spacing-lg) 0;
+    padding-bottom: var(--spacing-xl);
 }
 
-/* Style for the page numbers */
-.pagination a {
-    text-decoration: none;
-    margin: 10px 10px; /* Added margin for spacing, both top and bottom */
-    color: #000; /* Black font color */
-    background-color: #fff; /* White box background color */
-    border-radius: 5px; /* Rounded corners */
-    padding: 10px 20px; /* Increased padding for bigger boxes */
-    display: inline-block;
-    font-size: 16px; /* Increased font size */
-}
-
-/* Style for the current page number */
-.pagination a.current-page {
-    background-color: hwb(0 43% 57%); /* Yellow box background color for the current page */
-    color: #ffffff; /* Black font color */
-}
-
-/* Fancybox modal styles */
-.fancybox-slide {
-    text-align: center;
-}
-
-.fancybox-image {
+.pagination-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    justify-content: center;
     max-width: 100%;
-    max-height: 90vh;
-    margin: 0 auto;
-    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.8);
+    padding: 0 var(--spacing-md);
 }
 
-/* Add a background overlay for the modal */
-.fancybox-bg {
-    background-color: rgba(0, 0, 0, 0.8) !important;
+.page-numbers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    justify-content: center;
 }
 
-/* Close button in the modal */
-.fancybox-button.fancybox-button--close {
-    background-color: transparent !important;
-    border: none !important;
+.pagination-link {
+    text-decoration: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    font-weight: 500;
 }
 
-.fancybox-button.fancybox-button--close span {
-    color: #fff !important;
+.dark-mode .pagination-link {
+    background-color: var(--color-card-dark);
+    color: var(--color-text-dark);
 }
 
-/* Style for the logo container */
-.logo-container {
-    text-align: center;
-    margin: 20px 0;
+.light-mode .pagination-link {
+    background-color: var(--color-card-light);
+    color: var(--color-text-light);
+    box-shadow: var(--shadow-sm);
 }
 
-/* Style for the logo image */
-.logo {
-    max-width: 400px; /* Adjust the size as needed */
-    display: block;
-    margin: 0 auto;
+.pagination-link:hover {
+    transform: translateY(-2px);
 }
 
-/* Modal background */
+.dark-mode .pagination-link:hover {
+    background-color: var(--color-primary-dark);
+}
+
+.light-mode .pagination-link:hover {
+    background-color: var(--color-primary-light);
+    color: white;
+}
+
+.current-page {
+    position: relative;
+    font-weight: bold;
+}
+
+.dark-mode .current-page {
+    background-color: var(--color-primary-dark);
+}
+
+.light-mode .current-page {
+    background-color: var(--color-primary-light);
+    color: white;
+}
+
+/* Modal Styles */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black background */
-    z-index: 20;
+    z-index: var(--z-index-modal);
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-medium);
 }
 
-/* Modal content */
+.modal.modal-open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: var(--z-index-modal-backdrop);
+}
+
+.light-mode .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
 .modal-content {
-    background: #444; /* Dark background for modal */
-    color: white; /* White text for contrast */
-    padding: 20px;
-    border-radius: 5px;
-    width: 300px; /* Fixed-width modal */
-    text-align: center; /* Center content */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Box shadow for depth */
+    position: relative;
+    z-index: var(--z-index-modal);
+    width: 90%;
+    max-width: 500px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform var(--transition-medium),
+                opacity var(--transition-fast);
 }
 
-/* Close button */
+.modal.modal-open .modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.dark-mode .modal-content {
+    background-color: var(--color-modal-dark);
+    color: var(--color-text-dark);
+}
+
+.light-mode .modal-content {
+    background-color: var(--color-modal-light);
+    color: var(--color-text-light);
+}
+
+.modal-header {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid;
+    position: relative;
+}
+
+.dark-mode .modal-header {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.light-mode .modal-header {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.modal-header h2 {
+    text-align: center;
+    font-size: var(--font-size-lg);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
 .close-modal {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    color: white;
-    font-size: 20px;
-    font-weight: bold;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    background: none;
+    border: none;
+    font-size: var(--font-size-xl);
     cursor: pointer;
-    transition: color 0.2s ease;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-circle);
+    opacity: 0.7;
+    transition: opacity var(--transition-fast), 
+                background-color var(--transition-fast);
 }
 
 .close-modal:hover {
-    color: red; /* Red hover effect */
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Download icon inside the thumbnail */
-.download-icon {
-    position: absolute;
-    bottom: 10px; /* Position near the bottom */
-    right: 10px; /* Position near the right */
-    z-index: 11; /* Ensure it is above the image */
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-    padding: 5px; /* Add padding around the icon */
-    border-radius: 50%; /* Circular icon container */
-    cursor: pointer; /* Pointer for interactivity */
-    color: #fff; /* White icon color */
-    font-size: 18px; /* Adjust icon size */
-    display: flex; /* Center text inside the circle */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    opacity: 0.8; /* Slight transparency */
-    transition: background-color 0.3s ease, transform 0.2s ease;
+.light-mode .close-modal:hover {
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Hover effect for download icon */
-.download-icon:hover {
-    background-color: rgba(255, 255, 255, 0.8); /* Lighter background on hover */
-    color: #000; /* Change icon color to black on hover */
-    transform: scale(1.2); /* Slight scale effect */
+.info-row {
+    display: flex;
+    margin-bottom: var(--spacing-md);
 }
 
-/* Hide the gallery title */
-.gallery-title {
-    display: none;
+.info-label {
+    flex: 1;
+    font-weight: bold;
+    margin-right: var(--spacing-sm);
 }
-.footer {
+
+.info-value {
+    flex: 2;
+    word-break: break-all;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+    padding: var(--spacing-lg);
     text-align: center;
-    background-color: #333; /* Dark background color */
-    color: #fff; /* Text color */
-    padding: 10px; /* Padding around the footer content */
-    font-size: 12px; /* Font size for the footer text */
-    text-transform: uppercase; /* All caps */
+    border-top: 1px solid;
+}
+
+.dark-mode footer {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.light-mode footer {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.version {
+    opacity: 0.7;
+    font-size: var(--font-size-xs);
+    margin-top: var(--spacing-sm);
+}
+
+/* Responsive Styles */
+@media (max-width: 1200px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .logo {
+        max-width: 250px;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        padding: var(--spacing-sm);
+        gap: var(--spacing-sm);
+    }
+    
+    .image-card {
+        border-radius: var(--radius-sm);
+    }
+    
+    .card-actions button {
+        opacity: 0.8;
+        transform: translateX(0);
+    }
+    
+    .pagination-link {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .controls {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .info-row {
+        flex-direction: column;
+    }
+    
+    .info-label {
+        margin-bottom: var(--spacing-xs);
+    }
 }
