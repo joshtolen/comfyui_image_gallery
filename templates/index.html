@@ -782,6 +782,17 @@
                             img.src = img.dataset.src;
                             img.removeAttribute('data-src');
                             img.classList.remove('placeholder');
+                            
+                            // Remove shimmer effect when image loads
+                            img.onload = function() {
+                                const parentLink = img.closest('a');
+                                if (parentLink) {
+                                    const shimmerElement = parentLink.querySelector('.animate-shimmer');
+                                    if (shimmerElement) {
+                                        shimmerElement.style.display = 'none';
+                                    }
+                                }
+                            };
                         }
                         observer.unobserve(img);
                     }
@@ -797,8 +808,32 @@
                 img.src = img.dataset.src;
                 img.removeAttribute('data-src');
                 img.classList.remove('placeholder');
+                
+                // Remove shimmer effect when image loads
+                img.onload = function() {
+                    const parentLink = img.closest('a');
+                    if (parentLink) {
+                        const shimmerElement = parentLink.querySelector('.animate-shimmer');
+                        if (shimmerElement) {
+                            shimmerElement.style.display = 'none';
+                        }
+                    }
+                };
             });
         }
+        
+        // Also remove shimmer for already loaded images
+        document.querySelectorAll('img').forEach(img => {
+            if (img.complete && img.naturalHeight !== 0) {
+                const parentLink = img.closest('a');
+                if (parentLink) {
+                    const shimmerElement = parentLink.querySelector('.animate-shimmer');
+                    if (shimmerElement) {
+                        shimmerElement.style.display = 'none';
+                    }
+                }
+            }
+        });
     });
     </script>
 </body>
