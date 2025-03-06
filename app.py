@@ -136,6 +136,18 @@ def delete_file():
         return jsonify({'message': 'File deleted successfully.'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+def is_animated_webp(file_path):
+    """Check if a WebP file is animated"""
+    if not file_path.lower().endswith('.webp'):
+        return False
+        
+    try:
+        with Image.open(file_path) as img:
+            # If it has more than one frame, it's an animation
+            return hasattr(img, 'n_frames') and img.n_frames > 1
+    except:
+        return False
+
 @app.route('/')
 def image_gallery():
     # Get user preference for theme
@@ -152,11 +164,25 @@ def image_gallery():
         os.makedirs(file_dir, exist_ok=True)
         all_files = []
     
+    # Find which WebP files are animated
+    animated_webps = set()
+    for f in all_files:
+        if f.lower().endswith('.webp'):
+            file_path = os.path.join(file_dir, f)
+            if is_animated_webp(file_path) or os.path.exists(file_path + '.mp4'):
+                animated_webps.add(f)
+    
     # Filter files based on selected type
     if file_type == 'images':
-        image_files = [f for f in all_files if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp')) and not f.lower().endswith('.webp.mp4')]
+        image_files = [f for f in all_files if 
+                      (f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp')) or 
+                       (f.lower().endswith('.webp') and f not in animated_webps)) and 
+                      not f.lower().endswith('.webp.mp4')]
     elif file_type == 'videos':
-        image_files = [f for f in all_files if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or f.lower().endswith('.webp.mp4')]
+        image_files = [f for f in all_files if 
+                      f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or 
+                      f.lower().endswith('.webp.mp4') or 
+                      f in animated_webps]
     else:
         # Default: show all files
         image_files = all_files
@@ -226,9 +252,16 @@ def image_gallery():
         if thumbnail_queue and not is_processing:
             start_thumbnail_processor()
     
-    # Get counts for tab display
-    image_count = len([f for f in all_files if f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp', '.webp')) and not f.lower().endswith('.webp.mp4')])
-    video_count = len([f for f in all_files if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or f.lower().endswith('.webp.mp4')])
+    # Get counts for tab display based on our classification
+    image_count = len([f for f in all_files if 
+                     (f.lower().endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp')) or 
+                      (f.lower().endswith('.webp') and f not in animated_webps)) and 
+                     not f.lower().endswith('.webp.mp4')])
+                     
+    video_count = len([f for f in all_files if 
+                     f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or 
+                     f.lower().endswith('.webp.mp4') or 
+                     f in animated_webps])
     
     # Make response with cache headers for 5 minutes
     response = make_response(render_template('index.html', 
@@ -266,6 +299,40 @@ def serve_thumbnail(filename):
     """Serve thumbnail with proper caching headers"""
     response = send_from_directory(thumbnail_dir, filename)
     return add_cache_headers(response)
+    
+@app.route('/conversion-progress/<path:filename>')
+def conversion_progress(filename):
+    """Get the progress of WebP to MP4 conversion"""
+    try:
+        base_name = os.path.splitext(filename)[0]
+        progress_path = os.path.join(thumbnail_dir, f"{base_name}_progress.json")
+        
+        if os.path.exists(progress_path):
+            with open(progress_path, 'r') as f:
+                import json
+                data = json.load(f)
+                return jsonify(data)
+        else:
+            # Check if MP4 already exists
+            mp4_path = os.path.join(file_dir, filename + '.mp4')
+            if os.path.exists(mp4_path):
+                return jsonify({
+                    "status": "completed", 
+                    "progress": 100, 
+                    "total": 100,
+                    "filename": filename
+                })
+            
+            return jsonify({
+                "status": "not_started",
+                "filename": filename
+            })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "filename": filename
+        }), 500
 
 def thumbnail_exists(filename):
     """Check if a thumbnail exists for the given file"""
@@ -299,11 +366,25 @@ def convert_webp_to_mp4(file_path):
         
         temp_dir = tempfile.mkdtemp()
         
+        # Create a progress indicator file
+        base_name = os.path.splitext(file_path)[0]
+        progress_path = os.path.join(thumbnail_dir, f"{os.path.basename(base_name)}_progress.json")
+        
         try:
             # Extract frames from WebP
             # We'll use PIL to extract frames and save them as PNG
             with Image.open(file_path) as img:
                 frame_count = getattr(img, 'n_frames', 1)
+                
+                # Initialize progress tracking
+                with open(progress_path, 'w') as f:
+                    import json
+                    json.dump({
+                        "status": "extracting_frames", 
+                        "progress": 0, 
+                        "total": frame_count,
+                        "filename": os.path.basename(file_path)
+                    }, f)
                 
                 # Extract each frame
                 frames = []
@@ -313,6 +394,16 @@ def convert_webp_to_mp4(file_path):
                     rgb_frame = img.convert('RGB')
                     rgb_frame.save(frame_path)
                     frames.append(frame_path)
+                    
+                    # Update progress every 5 frames or at first and last frame
+                    if i == 0 or i == frame_count - 1 or i % 5 == 0:
+                        with open(progress_path, 'w') as f:
+                            json.dump({
+                                "status": "extracting_frames", 
+                                "progress": i + 1, 
+                                "total": frame_count,
+                                "filename": os.path.basename(file_path)
+                            }, f)
                 
                 # Get the duration of each frame (default to 1/24 seconds if not available)
                 try:
@@ -324,20 +415,73 @@ def convert_webp_to_mp4(file_path):
                 except Exception:
                     durations = [1/24] * frame_count
                 
+                # Update progress status
+                with open(progress_path, 'w') as f:
+                    json.dump({
+                        "status": "encoding_video", 
+                        "progress": 0, 
+                        "total": 100,
+                        "filename": os.path.basename(file_path)
+                    }, f)
+                
+                # Create a callback for encoding progress
+                def encoding_progress_callback(t):
+                    progress = int(t * 100)
+                    with open(progress_path, 'w') as f:
+                        json.dump({
+                            "status": "encoding_video", 
+                            "progress": progress, 
+                            "total": 100,
+                            "filename": os.path.basename(file_path)
+                        }, f)
+                
                 # Create a video from the frames
                 if frames:
                     clip = ImageSequenceClip(frames, durations=durations)
                     clip.write_videofile(mp4_path, codec='libx264', fps=24, 
-                                       audio=False, logger=None, verbose=False)
+                                       audio=False, logger=None, verbose=False,
+                                       progress_bar=False, callback=encoding_progress_callback)
+                    
+                # Update progress to completed
+                with open(progress_path, 'w') as f:
+                    json.dump({
+                        "status": "completed", 
+                        "progress": 100, 
+                        "total": 100,
+                        "filename": os.path.basename(file_path)
+                    }, f)
                     
                 return mp4_path
                 
         finally:
             # Clean up temporary directory
             shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            # Try to remove the progress file when done
+            try:
+                if os.path.exists(progress_path):
+                    os.remove(progress_path)
+            except:
+                pass
                 
     except Exception as e:
         print(f"Error converting WebP to MP4: {str(e)}")
+        
+        # Update progress to error state
+        try:
+            base_name = os.path.splitext(file_path)[0]
+            progress_path = os.path.join(thumbnail_dir, f"{os.path.basename(base_name)}_progress.json")
+            
+            with open(progress_path, 'w') as f:
+                import json
+                json.dump({
+                    "status": "error", 
+                    "error": str(e),
+                    "filename": os.path.basename(file_path)
+                }, f)
+        except:
+            pass
+            
         return None
 
 def generate_thumbnail(file):

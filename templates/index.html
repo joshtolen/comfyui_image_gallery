@@ -107,6 +107,16 @@
                             
                         <!-- Placeholder while image loads -->
                         <div class="placeholder-loading"></div>
+                        
+                        <!-- Conversion progress overlay (only for webp that need conversion) -->
+                        {% if image.filename.lower().endswith('.webp') and image.source == image.filename %}
+                        <div class="conversion-progress" data-filename="{{ image.filename }}">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-text">Waiting...</div>
+                        </div>
+                        {% endif %}
                     </a>
                     {% else %}
                     <!-- For images - use PhotoSwipe -->
@@ -228,6 +238,98 @@
         if (galleryGrid) {
             galleryGrid.style.display = 'grid';
             if (loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+        
+        // Check for WebP conversion progress
+        const conversionProgressElements = document.querySelectorAll('.conversion-progress');
+        const conversionProgressItems = {};
+        
+        // Initialize progress tracking
+        conversionProgressElements.forEach(element => {
+            const filename = element.getAttribute('data-filename');
+            conversionProgressItems[filename] = {
+                element: element,
+                progressBar: element.querySelector('.progress-fill'),
+                progressText: element.querySelector('.progress-text'),
+                isComplete: false,
+                lastChecked: 0
+            };
+        });
+        
+        // Function to update progress for all items
+        function updateAllProgress() {
+            const now = Date.now();
+            
+            Object.keys(conversionProgressItems).forEach(filename => {
+                const item = conversionProgressItems[filename];
+                
+                // Skip completed items
+                if (item.isComplete) {
+                    return;
+                }
+                
+                // Throttle API calls (check every 2 seconds)
+                if (now - item.lastChecked < 2000) {
+                    return;
+                }
+                
+                item.lastChecked = now;
+                
+                // Fetch progress from server
+                fetch(`/conversion-progress/${filename}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update progress based on status
+                        if (data.status === 'completed') {
+                            item.progressBar.style.width = '100%';
+                            item.progressText.textContent = 'Conversion complete!';
+                            item.isComplete = true;
+                            
+                            // Hide progress after 3 seconds
+                            setTimeout(() => {
+                                item.element.style.display = 'none';
+                                
+                                // If all items are complete, reload the page after 5 seconds
+                                if (Object.values(conversionProgressItems).every(i => i.isComplete)) {
+                                    setTimeout(() => {
+                                        location.reload();
+                                    }, 2000);
+                                }
+                            }, 3000);
+                        } 
+                        else if (data.status === 'error') {
+                            item.progressBar.style.width = '100%';
+                            item.progressBar.style.backgroundColor = '#e74c3c';
+                            item.progressText.textContent = 'Error: ' + (data.error || 'Unknown error');
+                            item.isComplete = true;
+                        }
+                        else if (data.status === 'not_started') {
+                            item.progressText.textContent = 'Waiting to start...';
+                        }
+                        else if (data.status === 'extracting_frames') {
+                            const percent = Math.round((data.progress / data.total) * 100);
+                            item.progressBar.style.width = `${percent}%`;
+                            item.progressText.textContent = `Extracting frames: ${data.progress}/${data.total}`;
+                        }
+                        else if (data.status === 'encoding_video') {
+                            const percent = Math.round((data.progress / data.total) * 100);
+                            item.progressBar.style.width = `${percent}%`;
+                            item.progressText.textContent = `Encoding video: ${percent}%`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking conversion progress:', error);
+                    });
+            });
+        }
+        
+        // Start checking progress if there are items to track
+        if (Object.keys(conversionProgressItems).length > 0) {
+            // Initial check
+            updateAllProgress();
+            
+            // Set up interval to check progress every 2 seconds
+            setInterval(updateAllProgress, 2000);
         }
         
         // Theme toggle functionality

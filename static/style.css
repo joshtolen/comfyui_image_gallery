@@ -389,6 +389,42 @@ button {
     pointer-events: none;
 }
 
+/* Conversion Progress */
+.conversion-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: var(--spacing-xs);
+    z-index: 10;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: var(--spacing-xs);
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--color-primary-dark);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    color: white;
+    font-size: var(--font-size-xs);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Filename Display */
 .filename-display {
     position: absolute;
