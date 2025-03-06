@@ -361,12 +361,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Show loading indicator while images load
         const loadingIndicator = document.getElementById('loading');
-        const galleryGrid = document.querySelector('.grid.grid-cols-auto-fill-280');
         
-        // Hide loading indicator after images load
-        if (galleryGrid) {
-            galleryGrid.style.display = 'grid';
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
+        // Hide loading indicator as soon as DOM is loaded
+        if (loadingIndicator) {
+            setTimeout(() => {
+                loadingIndicator.style.display = 'none';
+            }, 500); // Short delay to ensure page renders first
         }
         
         // Check for WebP conversion progress
