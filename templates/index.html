@@ -111,7 +111,7 @@
             {% endif %}
             
             <div class="page-numbers">
-                {% for p in range(max(1, page-2), min(total_pages+1, page+3)) %}
+                {% for p in range(page-2 if page-2 > 0 else 1, page+3 if page+3 <= total_pages+1 else total_pages+1) %}
                     <a href="?page={{ p }}" 
                        class="pagination-link{% if p == page %} current-page{% endif %}"
                        aria-label="Page {{ p }}"
