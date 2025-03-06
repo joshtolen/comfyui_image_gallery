@@ -393,7 +393,7 @@ def convert_webp_to_mp4(file_path):
         # First create a temporary folder for the frames
         import tempfile
         import shutil
-        from moviepy.editor import ImageSequenceClip
+        from moviepy import ImageSequenceClip
         
         temp_dir = tempfile.mkdtemp()
         
