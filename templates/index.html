@@ -96,6 +96,8 @@
                         <div class="video-indicator">
                             {% if image.is_converted_webp %}
                             🔄 <!-- Indicator for converted WebP -->
+                            {% elif image.is_webm %}
+                            🎬 <!-- Indicator for WebM video -->
                             {% else %}
                             ▶️ <!-- Regular video indicator -->
                             {% endif %}
@@ -215,7 +217,7 @@
             </div>
             <div class="modal-body video-container">
                 <video id="video-player" controls playsinline>
-                    <source src="" type="video/mp4">
+                    <source id="video-source" src="" type="video/mp4">
                     Your browser doesn't support HTML5 video playback.
                 </video>
             </div>
@@ -438,9 +440,24 @@
                 const fileName = this.getAttribute('data-filename');
                 const videoSource = this.getAttribute('data-source');
                 
-                // Set video source and title
+                // Determine the correct MIME type based on the file extension
+                let mimeType = 'video/mp4'; // Default
+                if (videoSource.toLowerCase().endsWith('.webm')) {
+                    mimeType = 'video/webm';
+                } else if (videoSource.toLowerCase().endsWith('.mkv')) {
+                    mimeType = 'video/x-matroska';
+                } else if (videoSource.toLowerCase().endsWith('.avi')) {
+                    mimeType = 'video/x-msvideo';
+                } else if (videoSource.toLowerCase().endsWith('.mov')) {
+                    mimeType = 'video/quicktime';
+                }
+                
+                // Set video source, MIME type, and title
                 document.getElementById('video-title').textContent = fileName;
-                videoPlayer.querySelector('source').src = videoSource;
+                const videoSourceElement = videoPlayer.querySelector('source');
+                videoSourceElement.src = videoSource;
+                videoSourceElement.type = mimeType;
+                console.log(`Playing video: ${videoSource} with MIME type: ${mimeType}`);
                 videoPlayer.load();
                 
                 // Show modal with animation

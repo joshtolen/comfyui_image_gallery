@@ -301,11 +301,19 @@ def image_gallery():
             file_source = img + '.mp4'
             is_video = True
         
-        # Check if this is a converted WebP
+        # Check file types for special handling
         is_converted_webp = False
+        is_webm = False
+        
+        # Check if this is a converted WebP
         if is_video and file_source.lower().endswith('.mp4') and img.lower().endswith('.webp'):
             is_converted_webp = True
             print(f"Marking as converted WebP in UI: {img}")
+        
+        # Check if this is a WebM file
+        if is_video and img.lower().endswith('.webm'):
+            is_webm = True
+            print(f"Marking as WebM in UI: {img}")
         
         # Check if original WebP is in archive
         in_archive = False
@@ -316,11 +324,12 @@ def image_gallery():
         image_data.append({
             'filename': img,
             'thumbnail': thumb,
-            'type': mime_type or ('video/mp4' if is_video else 'image/jpeg'),
+            'type': mime_type or ('video/webm' if is_webm else 'video/mp4' if is_video else 'image/jpeg'),
             'size': size_text,
             'is_video': is_video,
             'source': file_source,
             'is_converted_webp': is_converted_webp,
+            'is_webm': is_webm,
             'in_archive': in_archive
         })
 
@@ -761,6 +770,8 @@ def generate_thumbnail(file):
             try:
                 # Check if this is an MP4 that was converted from a WebP
                 is_converted_webp = False
+                
+                # For MP4 files, check if they were converted from WebP
                 if file.lower().endswith('.mp4'):
                     webp_name = file[:-4]  # Remove .mp4 extension
                     if webp_name.lower().endswith('.webp'):
@@ -770,6 +781,11 @@ def generate_thumbnail(file):
                         if os.path.exists(archive_webp_path):
                             print(f"Original WebP file is in archive: {archive_webp_path}")
                         is_converted_webp = True
+                
+                # Special handling for WebM files (mark them clearly)
+                is_webm = file.lower().endswith('.webm')
+                if is_webm:
+                    print(f"Processing WebM file: {file}")
                 
                 video_path = os.path.join(file_dir, file)
                 with VideoFileClip(video_path) as video:
