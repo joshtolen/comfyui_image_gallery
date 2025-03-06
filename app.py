@@ -2,7 +2,7 @@ import os
 import time
 import threading
 import mimetypes
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response, make_response
 from PIL import Image, ImageFilter
@@ -216,7 +216,7 @@ def image_gallery():
     # Set a shorter cache time for the main page (5 minutes)
     response.headers['Cache-Control'] = 'public, max-age=300'
     response.headers['Expires'] = (datetime.utcnow() + 
-                                 datetime.timedelta(seconds=300)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+                                 timedelta(seconds=300)).strftime('%a, %d %b %Y %H:%M:%S GMT')
     
     return response
 
