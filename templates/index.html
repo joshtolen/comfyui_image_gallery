@@ -361,7 +361,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Show loading indicator while images load
         const loadingIndicator = document.getElementById('loading');
-        const galleryGrid = document.querySelector('.gallery-grid');
+        const galleryGrid = document.querySelector('.grid.grid-cols-auto-fill-280');
         
         // Hide loading indicator after images load
         if (galleryGrid) {
@@ -370,19 +370,24 @@
         }
         
         // Check for WebP conversion progress
-        const conversionProgressElements = document.querySelectorAll('.conversion-progress');
+        const conversionProgressElements = document.querySelectorAll('[data-filename]');
         console.log(`Found ${conversionProgressElements.length} conversion progress elements`);
         
         const conversionProgressItems = {};
         
         // Initialize progress tracking
         conversionProgressElements.forEach(element => {
+            // Only process WebP files with progress bars
+            if (!element.classList.contains('absolute') || !element.querySelector('.progress-fill')) {
+                return;
+            }
+            
             const filename = element.getAttribute('data-filename');
             console.log(`Initializing progress tracking for: ${filename}`);
             conversionProgressItems[filename] = {
                 element: element,
                 progressBar: element.querySelector('.progress-fill'),
-                progressText: element.querySelector('.progress-text'),
+                progressText: element.querySelector('.text-white.text-xs'),
                 isComplete: false,
                 lastChecked: 0
             };
