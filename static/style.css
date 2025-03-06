@@ -223,7 +223,8 @@ button {
 /* Gallery Grid Layout */
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    /* Reduced number of columns by increasing min width */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--spacing-lg);
     padding: var(--spacing-xl);
     max-width: 1800px;
@@ -794,7 +795,7 @@ footer {
 /* Responsive Styles */
 @media (max-width: 1200px) {
     .gallery-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         padding: var(--spacing-md);
         gap: var(--spacing-md);
     }
@@ -815,7 +816,7 @@ footer {
     }
     
     .gallery-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         padding: var(--spacing-sm);
         gap: var(--spacing-sm);
     }

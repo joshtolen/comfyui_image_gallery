@@ -217,9 +217,26 @@ def image_gallery():
         # Default: show all files
         image_files = all_files
     
-    # Sort the list of files by last modified date (newest first)
+    # Sort the list of files by creation time (if available) or modification time (newest first)
     if image_files:
-        image_files.sort(key=lambda x: os.path.getmtime(os.path.join(file_dir, x)), reverse=True)
+        def get_file_time(filename):
+            file_path = os.path.join(file_dir, filename)
+            # Try to get creation time first, fall back to modified time
+            try:
+                # st_birthtime is available on macOS, not on Linux
+                # st_ctime on Linux is inode change time, not creation time
+                # On Windows, st_ctime is creation time
+                stats = os.stat(file_path)
+                if hasattr(stats, 'st_birthtime'):  # macOS
+                    return stats.st_birthtime
+                else:  # Linux/Windows fallback
+                    return stats.st_mtime
+            except:
+                # Fallback to modification time if there's an error
+                return os.path.getmtime(file_path)
+                
+        image_files.sort(key=get_file_time, reverse=True)
+        print(f"Sorted {len(image_files)} files by creation/modification time (newest first)")
 
     # Get the page number from the query string (default to 1)
     page = int(request.args.get('page', 1))
