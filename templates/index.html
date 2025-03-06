@@ -108,13 +108,13 @@
                         <!-- Placeholder while image loads -->
                         <div class="placeholder-loading"></div>
                         
-                        <!-- Conversion progress overlay (only for webp that need conversion) -->
-                        {% if image.filename.lower().endswith('.webp') and image.source == image.filename %}
+                        <!-- Conversion progress overlay (for all animated webp files) -->
+                        {% if image.filename.lower().endswith('.webp') %}
                         <div class="conversion-progress" data-filename="{{ image.filename }}">
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: 0%"></div>
                             </div>
-                            <div class="progress-text">Waiting...</div>
+                            <div class="progress-text">Checking...</div>
                         </div>
                         {% endif %}
                     </a>
@@ -242,11 +242,14 @@
         
         // Check for WebP conversion progress
         const conversionProgressElements = document.querySelectorAll('.conversion-progress');
+        console.log(`Found ${conversionProgressElements.length} conversion progress elements`);
+        
         const conversionProgressItems = {};
         
         // Initialize progress tracking
         conversionProgressElements.forEach(element => {
             const filename = element.getAttribute('data-filename');
+            console.log(`Initializing progress tracking for: ${filename}`);
             conversionProgressItems[filename] = {
                 element: element,
                 progressBar: element.querySelector('.progress-fill'),
@@ -304,7 +307,13 @@
                             item.isComplete = true;
                         }
                         else if (data.status === 'not_started') {
-                            item.progressText.textContent = 'Waiting to start...';
+                            if (data.in_queue) {
+                                item.progressText.textContent = 'Waiting to start...';
+                            } else {
+                                // Not a file that needs conversion, hide the progress
+                                item.element.style.display = 'none';
+                                item.isComplete = true;
+                            }
                         }
                         else if (data.status === 'extracting_frames') {
                             const percent = Math.round((data.progress / data.total) * 100);

@@ -144,8 +144,12 @@ def is_animated_webp(file_path):
     try:
         with Image.open(file_path) as img:
             # If it has more than one frame, it's an animation
-            return hasattr(img, 'n_frames') and img.n_frames > 1
-    except:
+            is_animated = hasattr(img, 'n_frames') and img.n_frames > 1
+            if is_animated:
+                print(f"Detected animated WebP: {file_path} with {img.n_frames} frames")
+            return is_animated
+    except Exception as e:
+        print(f"Error checking if WebP is animated: {file_path}, Error: {str(e)}")
         return False
 
 @app.route('/')
@@ -169,8 +173,17 @@ def image_gallery():
     for f in all_files:
         if f.lower().endswith('.webp'):
             file_path = os.path.join(file_dir, f)
-            if is_animated_webp(file_path) or os.path.exists(file_path + '.mp4'):
+            animated = is_animated_webp(file_path)
+            mp4_exists = os.path.exists(file_path + '.mp4')
+            
+            if animated or mp4_exists:
+                print(f"Adding {f} to animated WebPs list. Animated: {animated}, MP4 exists: {mp4_exists}")
                 animated_webps.add(f)
+                
+                # Always trigger conversion for animated WebPs if MP4 doesn't exist
+                if animated and not mp4_exists and not f in thumbnail_queue:
+                    print(f"Queueing conversion for animated WebP: {f}")
+                    thumbnail_queue.append(f)
     
     # Filter files based on selected type
     if file_type == 'images':
@@ -304,18 +317,24 @@ def serve_thumbnail(filename):
 def conversion_progress(filename):
     """Get the progress of WebP to MP4 conversion"""
     try:
+        print(f"Checking conversion progress for: {filename}")
         base_name = os.path.splitext(filename)[0]
-        progress_path = os.path.join(thumbnail_dir, f"{base_name}_progress.json")
+        progress_path = os.path.join(thumbnail_dir, f"{os.path.basename(base_name)}_progress.json")
+        print(f"Looking for progress file at: {progress_path}")
         
         if os.path.exists(progress_path):
+            print(f"Found progress file: {progress_path}")
             with open(progress_path, 'r') as f:
                 import json
                 data = json.load(f)
+                print(f"Progress data: {data}")
                 return jsonify(data)
         else:
             # Check if MP4 already exists
             mp4_path = os.path.join(file_dir, filename + '.mp4')
+            print(f"No progress file, checking if MP4 exists: {mp4_path}")
             if os.path.exists(mp4_path):
+                print(f"MP4 already exists: {mp4_path}")
                 return jsonify({
                     "status": "completed", 
                     "progress": 100, 
@@ -323,11 +342,17 @@ def conversion_progress(filename):
                     "filename": filename
                 })
             
+            # Check if file is in queue
+            in_queue = any(filename == f for f in thumbnail_queue)
+            print(f"File {'is' if in_queue else 'is not'} in thumbnail queue")
+            
             return jsonify({
                 "status": "not_started",
+                "in_queue": in_queue,
                 "filename": filename
             })
     except Exception as e:
+        print(f"Error checking conversion progress: {str(e)}")
         return jsonify({
             "status": "error",
             "error": str(e),
@@ -343,20 +368,26 @@ def thumbnail_exists(filename):
 
 def convert_webp_to_mp4(file_path):
     """Convert a WebP animation file to MP4 video format"""
+    print(f"convert_webp_to_mp4 called for: {file_path}")
     mp4_path = file_path + '.mp4'
     
     # Skip if the MP4 already exists
     if os.path.exists(mp4_path):
+        print(f"MP4 already exists, skipping conversion: {mp4_path}")
         return mp4_path
         
     try:
         # Check if it's actually an animated WebP by trying to open it with PIL
+        print(f"Checking if {file_path} is an animated WebP")
         with Image.open(file_path) as img:
             # If it has more than one frame, it's probably an animation
             is_animated = hasattr(img, 'n_frames') and img.n_frames > 1
             if not is_animated:
                 # Not an animation, no need to convert
+                print(f"Not an animated WebP, skipping conversion: {file_path}")
                 return None
+            else:
+                print(f"Confirmed animated WebP with {img.n_frames} frames: {file_path}")
 
         # Convert WebP to MP4 using MoviePy
         # First create a temporary folder for the frames
@@ -426,21 +457,32 @@ def convert_webp_to_mp4(file_path):
                 
                 # Create a callback for encoding progress
                 def encoding_progress_callback(t):
-                    progress = int(t * 100)
-                    with open(progress_path, 'w') as f:
-                        json.dump({
-                            "status": "encoding_video", 
-                            "progress": progress, 
-                            "total": 100,
-                            "filename": os.path.basename(file_path)
-                        }, f)
+                    try:
+                        progress = int(t * 100)
+                        print(f"Encoding progress for {os.path.basename(file_path)}: {progress}%")
+                        with open(progress_path, 'w') as f:
+                            json.dump({
+                                "status": "encoding_video", 
+                                "progress": progress, 
+                                "total": 100,
+                                "filename": os.path.basename(file_path)
+                            }, f)
+                    except Exception as e:
+                        print(f"Error in progress callback: {str(e)}")
                 
                 # Create a video from the frames
                 if frames:
-                    clip = ImageSequenceClip(frames, durations=durations)
-                    clip.write_videofile(mp4_path, codec='libx264', fps=24, 
-                                       audio=False, logger=None, verbose=False,
-                                       progress_bar=False, callback=encoding_progress_callback)
+                    try:
+                        print(f"Creating video clip from {len(frames)} frames")
+                        clip = ImageSequenceClip(frames, durations=durations)
+                        print(f"Starting video encoding to {mp4_path}")
+                        clip.write_videofile(mp4_path, codec='libx264', fps=24, 
+                                           audio=False, logger=None, verbose=True,
+                                           progress_bar=False, callback=encoding_progress_callback)
+                        print(f"Successfully encoded video to {mp4_path}")
+                    except Exception as e:
+                        print(f"Error during video encoding: {str(e)}")
+                        raise
                     
                 # Update progress to completed
                 with open(progress_path, 'w') as f:
@@ -542,6 +584,7 @@ def generate_thumbnail(file):
                     is_animated = hasattr(webp_img, 'n_frames') and webp_img.n_frames > 1
                     
                     if is_animated:
+                        print(f"Starting conversion of animated WebP to MP4: {file_path}")
                         # Convert animated WebP to MP4 in the background
                         # We don't want to block thumbnail generation
                         convert_thread = threading.Thread(
@@ -550,6 +593,7 @@ def generate_thumbnail(file):
                         )
                         convert_thread.daemon = True
                         convert_thread.start()
+                        print(f"Conversion thread started for: {file_path}")
                         
                         # For animated WebP, extract the first frame for thumbnail
                         webp_img.seek(0)
