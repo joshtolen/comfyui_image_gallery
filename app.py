@@ -20,9 +20,36 @@ thumbnail_dir = '/app/static/thumbnails'
 # Define directory for archived files (converted WebPs)
 archive_dir = '/app/static/images/output/archive'
 
+# Define file to store favorites
+favorites_file = '/app/static/favorites.json'
+
 # Ensure the thumbnail and archive directories exist
 os.makedirs(thumbnail_dir, exist_ok=True)
 os.makedirs(archive_dir, exist_ok=True)
+
+# Load favorites from JSON file
+def load_favorites():
+    try:
+        if os.path.exists(favorites_file):
+            with open(favorites_file, 'r') as f:
+                import json
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"Error loading favorites: {str(e)}")
+        return {}
+
+# Save favorites to JSON file
+def save_favorites(favorites_data):
+    try:
+        with open(favorites_file, 'w') as f:
+            import json
+            json.dump(favorites_data, f)
+    except Exception as e:
+        print(f"Error saving favorites: {str(e)}")
+
+# Initialize favorites
+favorites = load_favorites()
 
 # Set up caching - 1 week in seconds
 CACHE_DURATION = 604800
@@ -213,6 +240,9 @@ def image_gallery():
                       f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or 
                       f.lower().endswith('.webp.mp4') or 
                       f in animated_webps]
+    elif file_type == 'favorites':
+        # Only show files that are in the favorites list
+        image_files = [f for f in all_files if f in favorites]
     else:
         # Default: show all files
         image_files = all_files
@@ -330,7 +360,8 @@ def image_gallery():
             'source': file_source,
             'is_converted_webp': is_converted_webp,
             'is_webm': is_webm,
-            'in_archive': in_archive
+            'in_archive': in_archive,
+            'is_favorite': img in favorites
         })
 
     # Queue thumbnails for background generation
@@ -353,6 +384,9 @@ def image_gallery():
                      f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.mp5')) or 
                      f.lower().endswith('.webp.mp4') or 
                      f in animated_webps])
+                     
+    # Count favorites
+    favorite_count = len([f for f in all_files if f in favorites])
     
     # Make response with cache headers for 5 minutes
     response = make_response(render_template('index.html', 
@@ -363,6 +397,7 @@ def image_gallery():
                                            file_type=file_type,
                                            image_count=image_count,
                                            video_count=video_count,
+                                           favorite_count=favorite_count,
                                            total_count=len(all_files)))
     
     # Set a shorter cache time for the main page (5 minutes)
@@ -383,6 +418,36 @@ def toggle_theme():
     response.set_cookie('theme', new_theme, max_age=31536000)  # 1 year
     
     return response
+
+@app.route('/toggle-favorite', methods=['POST'])
+def toggle_favorite():
+    """Toggle favorite status for a file"""
+    try:
+        data = request.get_json()
+        filename = data.get('file')
+        is_favorite = data.get('is_favorite', False)
+        
+        if not filename:
+            return jsonify({'error': 'No file specified'}), 400
+            
+        # Update the favorites
+        global favorites
+        if is_favorite:
+            favorites[filename] = True
+        else:
+            if filename in favorites:
+                del favorites[filename]
+                
+        # Save to file
+        save_favorites(favorites)
+        
+        return jsonify({
+            'success': True,
+            'file': filename,
+            'is_favorite': is_favorite
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/serve-thumbnail/<path:filename>')
