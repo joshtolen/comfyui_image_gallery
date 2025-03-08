@@ -1,52 +1,116 @@
-# ComfyUI Output Images Gallery
+# ComfyUI Image Gallery (v3.0)
 
-## Introduction
-
-ComfyUI Output Images Gallery is a simple web application built with Flask to display a gallery of images. It's designed to showcase a collection of images with thumbnails and provides an easy way for users to view and navigate through the gallery.
+A modern, responsive image gallery specifically designed for browsing and managing images generated with ComfyUI. Version 3.0 is completely rewritten with React and Tailwind CSS for a more responsive and interactive user experience.
 
 <img src="static/logo.png" width="50%" height="50%">
 
 ## Features
 
-- Display images with responsive thumbnails.
-- Modern and professional design for desktop browser and mobile.
-- Pagination for easy navigation.
-- Click on thumbnails to view full-sized images in a lightbox (Fancybox).
-- Dark mode aesthetic for an elegant look.
+- 🖼️ Responsive image gallery with React and Tailwind CSS
+- 📹 Improved video support (webm, mp4, animated WebP)
+- 🌓 Dark/Light theme toggle
+- ⭐ Favorites functionality
+- 🔄 Animated WebP to MP4 conversion
+- 📱 Mobile-friendly interface
+- 🌅 Lazy loading of images
+- 🔍 Enhanced lightbox with zoom and navigation
+- 📂 Delete single or multiple files
+- 📊 Improved sorting by creation time
+- 🔄 Real-time conversion progress indicators
+
+## Architecture
+
+Version 3.0 uses a modern architecture:
+- **Backend**: Flask API server
+- **Frontend**: React with Tailwind CSS
+- **State Management**: React Hooks
+- **UI Components**: Headless UI components
 
 ## Installation and Setup
 
 ### Prerequisites
 
-Before you begin, ensure you have the following installed:
+- **Python 3.9+**: For the Flask backend
+- **Node.js 16+**: For building the React frontend
+- **FFmpeg**: For WebP to MP4 conversion
 
-- **Python:** You can download Python from [Python's official website](https://www.python.org/downloads/).
-- **Flask:** Install Flask, the web framework, using pip:
-- **Pillow:** Pillow is used for image processing. Install it using pip:
+### Quick Install
 
-### Symlink Your Image Directory
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/comfyui_image_gallery.git
+   cd comfyui_image_gallery
+   ```
 
-To use your own images, symlink your image directory to the project's "static/images/output" directory:
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```ln -s /path/to/your/images /path/to/gallery/static/images/output```
+3. Build the frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   ```
 
-Configure Paths
-You may need to configure the paths for the logo, thumbnails, and original images in the app.py file:
+4. Set up a symlink to your ComfyUI output folder:
+   ```bash
+   ln -s /path/to/your/comfyui/output /path/to/gallery/static/images/output
+   ```
 
-logo.png - Change the path of the logo image on line 16.
-thumbnails - The generated thumbnail images will be saved in the static/thumbnails directory.
-original images - The original images are expected in the static/images/output directory (symlinked from your image directory).
-Set Port Number and Run the App
-You can change the port number and host as needed in the app.py file on line 44. By default, it's set to run on http://0.0.0.0:9999.
+### Running the Application
 
-Start the Flask app by running the following command in your terminal or command prompt:
+Start the Flask app:
+```bash
+python app.py
+```
 
-```python app.py```
+The gallery will be available at http://localhost:9999
 
-The app should now be running, and you can access it by opening a web browser and navigating to http://localhost:9999 (or the custom host and port you've specified).
+### Running with Docker
 
-Customization
-You can customize the gallery's appearance and behavior by modifying the HTML templates, CSS styles, and the Flask application code. Feel free to tailor it to your specific requirements.
+```bash
+# Build the Docker image
+docker build -t comfyui-gallery .
 
-![image](https://github.com/Smuzzies/comfyui_image_gallery/assets/110495122/eb8adc34-811e-434b-9ea7-d225f7cc63bb)
-![image](https://github.com/Smuzzies/comfyui_image_gallery/assets/110495122/cf30e7ab-041d-4b9a-99c5-b6d863bb09f8)
+# Run the container with your images directory mounted
+docker run -p 9999:9999 \
+  -v /path/to/your/comfyui/images:/app/static/images/output \
+  -v /path/to/your/thumbnails:/app/static/thumbnails \
+  -v /path/to/your/archive:/app/static/images/output/archive \
+  comfyui-gallery
+```
+
+## Development
+
+### Frontend Development
+
+The React frontend is in the `frontend` directory. To start the development server:
+
+```bash
+cd frontend
+npm run dev
+```
+
+This starts a hot-reloading development server that proxies API requests to the Flask backend.
+
+### API Endpoints
+
+The backend provides these main API endpoints:
+
+- `GET /api/`: Get gallery data with pagination
+- `POST /api/toggle-favorite`: Toggle favorite status for an image
+- `POST /api/delete-file`: Delete a single file
+- `POST /api/delete-files`: Delete multiple files
+- `GET /api/conversion-progress/<filename>`: Check WebP conversion progress
+- `GET /api/file-info/<filename>`: Get metadata for a file
+
+## Screenshots
+
+![Dark Theme](https://github.com/Smuzzies/comfyui_image_gallery/assets/110495122/eb8adc34-811e-434b-9ea7-d225f7cc63bb)
+![Light Theme](https://github.com/Smuzzies/comfyui_image_gallery/assets/110495122/cf30e7ab-041d-4b9a-99c5-b6d863bb09f8)
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

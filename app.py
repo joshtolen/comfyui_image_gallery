@@ -4,7 +4,7 @@ import threading
 import mimetypes
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, send_from_directory, Response, make_response
+from flask import Flask, render_template, request, jsonify, send_from_directory, Response, make_response, send_file
 from PIL import Image, ImageFilter
 from moviepy import VideoFileClip
 from werkzeug.utils import secure_filename
@@ -23,7 +23,8 @@ archive_dir = '/app/static/images/output/archive'
 # Define file to store favorites
 favorites_file = '/app/static/favorites.json'
 
-# Ensure the thumbnail and archive directories exist
+# Ensure all necessary directories exist at runtime
+os.makedirs(file_dir, exist_ok=True)
 os.makedirs(thumbnail_dir, exist_ok=True)
 os.makedirs(archive_dir, exist_ok=True)
 
@@ -86,7 +87,7 @@ def start_thumbnail_processor():
     thread.daemon = True
     thread.start()
 
-@app.route('/file-info/<path:filename>')
+@app.route('/api/file-info/<path:filename>')
 def file_info(filename):
     """Endpoint to get file metadata"""
     try:
@@ -113,7 +114,7 @@ def file_info(filename):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/delete-files', methods=['POST'])
+@app.route('/api/delete-files', methods=['POST'])
 def delete_files():
     try:
         # Get file list from the request
@@ -138,7 +139,7 @@ def delete_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/delete-file', methods=['POST'])
+@app.route('/api/delete-file', methods=['POST'])
 def delete_file():
     try:
         # Get file from the request
@@ -183,8 +184,25 @@ def is_animated_webp(file_path):
         print(f"Error checking if WebP is animated: {file_path}, Error: {str(e)}")
         return False
 
-@app.route('/')
-def image_gallery():
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    """Serve the React app for any non-API routes"""
+    if path.startswith('api/'):
+        # If the path starts with api/, this will be handled by other routes
+        return "Not Found", 404
+        
+    # Check if the path is a file in the React build directory
+    react_build_path = os.path.join(app.static_folder, 'react')
+    if os.path.exists(os.path.join(react_build_path, path)) and path:
+        return send_from_directory(react_build_path, path)
+        
+    # For all other routes, serve the React index.html
+    return send_from_directory(react_build_path, 'index.html')
+
+@app.route('/api/')
+def api_image_gallery():
+    """API endpoint to get gallery data"""
     # Get user preference for theme
     theme = request.cookies.get('theme', 'dark')
     
@@ -388,27 +406,29 @@ def image_gallery():
     # Count favorites
     favorite_count = len([f for f in all_files if f in favorites])
     
-    # Make response with cache headers for 5 minutes
-    response = make_response(render_template('index.html', 
-                                           images=image_data,
-                                           total_pages=total_pages, 
-                                           page=page,
-                                           theme=theme,
-                                           file_type=file_type,
-                                           image_count=image_count,
-                                           video_count=video_count,
-                                           favorite_count=favorite_count,
-                                           total_count=len(all_files)))
+    # Return JSON response
+    response_data = {
+        'images': image_data,
+        'total_pages': total_pages,
+        'page': page,
+        'theme': theme,
+        'file_type': file_type,
+        'image_count': image_count,
+        'video_count': video_count,
+        'favorite_count': favorite_count,
+        'total_count': len(all_files)
+    }
     
-    # Set a shorter cache time for the main page (5 minutes)
+    # Make response with cache headers
+    response = make_response(jsonify(response_data))
     response.headers['Cache-Control'] = 'public, max-age=300'
     response.headers['Expires'] = (datetime.utcnow() + 
-                                 timedelta(seconds=300)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+                                  timedelta(seconds=300)).strftime('%a, %d %b %Y %H:%M:%S GMT')
     
     return response
 
 
-@app.route('/toggle-theme', methods=['POST'])
+@app.route('/api/toggle-theme', methods=['POST'])
 def toggle_theme():
     """Toggle between light and dark theme"""
     current_theme = request.cookies.get('theme', 'dark')
@@ -419,7 +439,7 @@ def toggle_theme():
     
     return response
 
-@app.route('/toggle-favorite', methods=['POST'])
+@app.route('/api/toggle-favorite', methods=['POST'])
 def toggle_favorite():
     """Toggle favorite status for a file"""
     try:
@@ -450,13 +470,19 @@ def toggle_favorite():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/serve-thumbnail/<path:filename>')
+@app.route('/api/serve-thumbnail/<path:filename>')
 def serve_thumbnail(filename):
     """Serve thumbnail with proper caching headers"""
     response = send_from_directory(thumbnail_dir, filename)
     return add_cache_headers(response)
+
+@app.route('/api/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files with proper caching headers"""
+    response = send_from_directory(app.static_folder, filename)
+    return add_cache_headers(response)
     
-@app.route('/check-file-status/<path:filename>')
+@app.route('/api/check-file-status/<path:filename>')
 def check_file_status(filename):
     """Check if a file exists, has been archived, or converted to MP4"""
     original_path = os.path.join(file_dir, filename)
@@ -472,7 +498,7 @@ def check_file_status(filename):
     
     return jsonify(result)
     
-@app.route('/conversion-progress/<path:filename>')
+@app.route('/api/conversion-progress/<path:filename>')
 def conversion_progress(filename):
     """Get the progress of WebP to MP4 conversion"""
     try:

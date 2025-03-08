@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply antialiased min-h-screen;
+  }
+  
+  /* Light mode (default) */
+  body {
+    @apply bg-background-light text-gray-800 transition-colors duration-300;
+  }
+  
+  /* Dark mode */
+  body.dark {
+    @apply bg-background-dark text-white;
+  }
+}
+
+@layer components {
+  /* Animation for loading spinner */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Shimmer effect for placeholders */
+  @keyframes shimmer {
+    to { background-position: -200% 0; }
+  }
+  
+  /* Progress bar animation */
+  .progress-fill {
+    transition: width 0.3s ease;
+  }
+  
+  /* These utilities will be available in classes */
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  /* Image grid layout */
+  .grid-cols-auto-fill-280 {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
