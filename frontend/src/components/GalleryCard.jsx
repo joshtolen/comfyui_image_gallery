@@ -42,9 +42,8 @@ const GalleryCard = ({
   return (
     <div className="flex justify-center">
       <div 
-        className={`relative w-full aspect-square rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-lg group ${
-          theme === 'dark' ? 'bg-card-dark' : 'bg-card-light'
-        }`}
+        className="relative w-full aspect-square rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-lg group"
+        style={{ backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff' }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -143,7 +142,7 @@ const GalleryCard = ({
           {item.filename.toLowerCase().endsWith('.webp') && (
             <div className="absolute bottom-0 left-0 w-full bg-black/70 p-1 z-20">
               <div className="w-full h-2.5 bg-white/20 rounded-sm overflow-hidden mb-1">
-                <div className="progress-fill h-full bg-primary-dark" style={{ width: `${conversionProgress}%` }}></div>
+                <div className="progress-fill h-full" style={{ width: `${conversionProgress}%`, backgroundColor: '#6c5ce7' }}></div>
               </div>
               <div className="text-white text-xs text-center whitespace-nowrap overflow-hidden text-ellipsis">
                 {conversionStatus || 'Checking...'}

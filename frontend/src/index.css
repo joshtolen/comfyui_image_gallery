@@ -13,12 +13,14 @@
   
   /* Light mode (default) */
   body {
-    @apply bg-background-light text-gray-800 transition-colors duration-300;
+    background-color: #f5f5f5;
+    @apply text-gray-800 transition-colors duration-300;
   }
   
   /* Dark mode */
   body.dark {
-    @apply bg-background-dark text-white;
+    background-color: #1a1a1a;
+    @apply text-white;
   }
 }
 

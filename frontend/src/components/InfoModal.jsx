@@ -37,9 +37,11 @@ const InfoModal = ({ isOpen, onClose, fileInfo }) => {
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel 
-                className={`w-full max-w-md transform overflow-hidden rounded-lg text-left align-middle shadow-xl transition-all ${
-                  theme === 'dark' ? 'bg-card-dark text-white' : 'bg-card-light text-gray-800'
-                }`}
+                className="w-full max-w-md transform overflow-hidden rounded-lg text-left align-middle shadow-xl transition-all"
+                style={{ 
+                  backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
+                  color: theme === 'dark' ? 'white' : '#1f2937'
+                }}
               >
                 <div className={`p-4 border-b ${
                   theme === 'dark' ? 'border-white/10' : 'border-black/10'
