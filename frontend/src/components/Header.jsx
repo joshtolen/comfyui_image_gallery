@@ -7,9 +7,8 @@ const Header = () => {
 
   return (
     <header className={`p-4 border-b ${
-      theme === 'dark' ? 'border-white/10' : 'border-black/10'
-    }`}
-    style={{ backgroundColor: theme === 'dark' ? '#1a1a1a' : '#f5f5f5' }}>
+      theme === 'dark' ? 'border-white/10 bg-background-dark' : 'border-black/10 bg-background-light'
+    }`}>
       <div className="flex justify-between items-center flex-wrap max-w-7xl mx-auto gap-4">
         <div className="flex-1 text-center">
           <img 
@@ -23,11 +22,11 @@ const Header = () => {
         <div className="flex gap-4 items-center">
           <button 
             onClick={toggleTheme}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-xl border transition-transform hover:rotate-12 hover:scale-110"
-            style={{ 
-              borderColor: theme === 'dark' ? '#00cec9' : '#00b894',
-              color: theme === 'dark' ? '#00cec9' : '#00b894'
-            }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-xl border transition-transform hover:rotate-12 hover:scale-110 ${
+              theme === 'dark' 
+                ? 'border-accent-dark text-accent-dark' 
+                : 'border-accent-light text-accent-light'
+            }`}
             aria-label="Toggle light/dark theme"
           >
             {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}

@@ -36,24 +36,18 @@ const Pagination = ({ currentPage, totalPages, fileType = 'all' }) => {
           <>
             <Link
               to={getPageUrl(1)}
-              className="px-3 py-2 rounded-md transition-all hover:-translate-y-0.5"
-              style={{
-                backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                color: theme === 'dark' ? 'white' : '#1f2937',
-                boxShadow: theme !== 'dark' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
-              }}
+              className={`px-3 py-2 rounded-md transition-all hover:-translate-y-0.5 ${
+                theme === 'dark' ? 'bg-card-dark text-white' : 'bg-card-light text-gray-800 shadow-sm'
+              }`}
               aria-label="First page"
             >
               &laquo; First
             </Link>
             <Link
               to={getPageUrl(currentPage - 1)}
-              className="px-3 py-2 rounded-md transition-all hover:-translate-y-0.5"
-              style={{
-                backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                color: theme === 'dark' ? 'white' : '#1f2937',
-                boxShadow: theme !== 'dark' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
-              }}
+              className={`px-3 py-2 rounded-md transition-all hover:-translate-y-0.5 ${
+                theme === 'dark' ? 'bg-card-dark text-white' : 'bg-card-light text-gray-800 shadow-sm'
+              }`}
               aria-label="Previous page"
             >
               Previous
@@ -89,24 +83,18 @@ const Pagination = ({ currentPage, totalPages, fileType = 'all' }) => {
           <>
             <Link
               to={getPageUrl(currentPage + 1)}
-              className="px-3 py-2 rounded-md transition-all hover:-translate-y-0.5"
-              style={{
-                backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                color: theme === 'dark' ? 'white' : '#1f2937',
-                boxShadow: theme !== 'dark' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
-              }}
+              className={`px-3 py-2 rounded-md transition-all hover:-translate-y-0.5 ${
+                theme === 'dark' ? 'bg-card-dark text-white' : 'bg-card-light text-gray-800 shadow-sm'
+              }`}
               aria-label="Next page"
             >
               Next
             </Link>
             <Link
               to={getPageUrl(totalPages)}
-              className="px-3 py-2 rounded-md transition-all hover:-translate-y-0.5"
-              style={{
-                backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                color: theme === 'dark' ? 'white' : '#1f2937',
-                boxShadow: theme !== 'dark' ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none'
-              }}
+              className={`px-3 py-2 rounded-md transition-all hover:-translate-y-0.5 ${
+                theme === 'dark' ? 'bg-card-dark text-white' : 'bg-card-light text-gray-800 shadow-sm'
+              }`}
               aria-label="Last page"
             >
               Last &raquo;

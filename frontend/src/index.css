@@ -8,22 +8,17 @@
   }
   
   body {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    min-height: 100vh;
+    @apply antialiased min-h-screen;
   }
   
   /* Light mode (default) */
   body {
-    background-color: #f5f5f5;
-    color: #1f2937;
-    transition: background-color 0.3s, color 0.3s;
+    @apply bg-background-light text-gray-800 transition-colors duration-300;
   }
   
   /* Dark mode */
   body.dark {
-    background-color: #1a1a1a;
-    color: white;
+    @apply bg-background-dark text-white;
   }
 }
 
