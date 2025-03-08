@@ -48,6 +48,53 @@
             border-bottom-color: var(--border-dark);
         }
         
+        /* Search styles */
+        .search-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px auto;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 25px 0 0 25px;
+            border: none;
+            background-color: var(--light-card);
+            color: var(--light-text);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        body.dark .search-input {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .search-input:focus {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 0 25px 25px 0;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .search-button:hover {
+            background-color: var(--secondary-color);
+        }
+        
         .logo {
             max-width: 300px;
             height: auto;
@@ -489,6 +536,70 @@
         .checkbox:checked {
             opacity: 1;
         }
+        
+        /* Conversion progress styles */
+        .conversion-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            z-index: 6;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover .conversion-progress {
+            transform: translateY(0);
+        }
+        
+        .conversion-progress.converting {
+            transform: translateY(0);
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-text {
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* No results message */
+        .no-results {
+            grid-column: 1 / -1;
+            padding: 40px;
+            text-align: center;
+            background-color: var(--light-card);
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 18px;
+            color: var(--light-text);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        body.dark .no-results {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body class="{% if theme == 'dark' %}dark{% else %}light{% endif %}">
@@ -508,6 +619,11 @@
             <a href="?type=favorites" class="filter-tab {% if file_type == 'favorites' %}active{% endif %}">
                 Favorites ⭐ ({{ favorite_count | default(value=0) }})
             </a>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search by filename..." class="search-input">
+            <button id="search-button" class="search-button">🔍</button>
         </div>
     </div>
 
@@ -534,6 +650,15 @@
                 {% endif %}
                 
                 <div class="filename">{{ image.filename | truncate(length=30) }}</div>
+                
+                {% if image.filename is containing(".webp") or image.filename is containing(".WEBP") %}
+                <div class="conversion-progress" data-filename="{{ image.filename }}">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">Checking...</div>
+                </div>
+                {% endif %}
                 
                 <div class="actions">
                     <div class="action-btn favorite-btn" data-filename="{{ image.filename }}" data-favorite="{{ image.is_favorite | default(value=false) }}">
@@ -921,6 +1046,173 @@
                             alert('Error: ' + (data.message || 'Could not delete files'));
                         }
                     });
+                }
+            });
+            
+            // WebP Conversion Progress Tracking
+            const conversionBars = document.querySelectorAll('.conversion-progress');
+            const conversionStatus = {};
+            
+            // Initialize conversion progress tracking
+            conversionBars.forEach(function(bar) {
+                const filename = bar.getAttribute('data-filename');
+                conversionStatus[filename] = {
+                    element: bar,
+                    progressBar: bar.querySelector('.progress-fill'),
+                    progressText: bar.querySelector('.progress-text'),
+                    isComplete: false,
+                    lastChecked: 0,
+                    inQueue: false
+                };
+            });
+            
+            // Function to update all conversion progress
+            function updateConversionProgress() {
+                const now = Date.now();
+                
+                Object.keys(conversionStatus).forEach(function(filename) {
+                    const item = conversionStatus[filename];
+                    
+                    // Skip completed items
+                    if (item.isComplete) {
+                        return;
+                    }
+                    
+                    // Throttle API calls (check every 2 seconds)
+                    if (now - item.lastChecked < 2000) {
+                        return;
+                    }
+                    
+                    item.lastChecked = now;
+                    
+                    // Fetch progress from server
+                    fetch('/conversion-progress/' + encodeURIComponent(filename))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data) return;
+                            
+                            const statusElement = item.element;
+                            const progressBar = item.progressBar;
+                            const progressText = item.progressText;
+                            
+                            // Handle different states
+                            if (data.status === 'completed') {
+                                progressBar.style.width = '100%';
+                                progressText.textContent = 'Conversion complete';
+                                item.isComplete = true;
+                                
+                                // Show "Complete" for 3 seconds then hide
+                                statusElement.classList.add('converting');
+                                setTimeout(() => {
+                                    statusElement.classList.remove('converting');
+                                    
+                                    // After a delay, reload the page to show the new MP4
+                                    setTimeout(() => {
+                                        if (data.archived) {
+                                            window.location.reload();
+                                        }
+                                    }, 1000);
+                                }, 3000);
+                            }
+                            else if (data.status === 'error') {
+                                progressBar.style.width = '100%';
+                                progressBar.style.backgroundColor = '#e74c3c';
+                                progressText.textContent = 'Error: ' + (data.error || 'Unknown error');
+                                statusElement.classList.add('converting');
+                                item.isComplete = true;
+                            }
+                            else if (data.status === 'not_started') {
+                                if (data.in_queue) {
+                                    statusElement.classList.add('converting');
+                                    progressText.textContent = 'Waiting in queue...';
+                                    item.inQueue = true;
+                                } else {
+                                    // Not a webp that needs conversion
+                                    item.isComplete = true;
+                                }
+                            }
+                            else if (data.status === 'extracting_frames') {
+                                statusElement.classList.add('converting');
+                                const percent = Math.round((data.progress / data.total) * 100) || 0;
+                                progressBar.style.width = `${percent}%`;
+                                progressText.textContent = `Extracting frames: ${data.progress || 0}/${data.total || 0}`;
+                            }
+                            else if (data.status === 'encoding_video') {
+                                statusElement.classList.add('converting');
+                                const percent = Math.round((data.progress / data.total) * 100) || 0;
+                                progressBar.style.width = `${percent}%`;
+                                progressText.textContent = `Encoding video: ${percent}%`;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking conversion progress:', error);
+                        });
+                });
+            }
+            
+            // Start checking progress if there are items to track
+            if (Object.keys(conversionStatus).length > 0) {
+                // Initial check
+                updateConversionProgress();
+                
+                // Set interval to check every 2 seconds
+                setInterval(updateConversionProgress, 2000);
+            }
+            
+            // Search functionality
+            const searchInput = document.getElementById('search-input');
+            const searchButton = document.getElementById('search-button');
+            const allCards = document.querySelectorAll('.card');
+            
+            function performSearch() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                let matchCount = 0;
+                
+                // No search term, show all
+                if (!searchTerm) {
+                    allCards.forEach(card => {
+                        card.style.display = '';
+                    });
+                    return;
+                }
+                
+                // Filter cards based on search term
+                allCards.forEach(card => {
+                    const filename = card.querySelector('.filename').textContent.toLowerCase();
+                    if (filename.includes(searchTerm)) {
+                        card.style.display = '';
+                        matchCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Show a message if no results
+                if (matchCount === 0) {
+                    // If no match, display a message
+                    if (!document.getElementById('no-results')) {
+                        const noResults = document.createElement('div');
+                        noResults.id = 'no-results';
+                        noResults.className = 'no-results';
+                        noResults.textContent = 'No matching files found.';
+                        document.getElementById('gallery').appendChild(noResults);
+                    }
+                } else {
+                    // Remove message if it exists
+                    const noResults = document.getElementById('no-results');
+                    if (noResults) {
+                        noResults.remove();
+                    }
+                }
+            }
+            
+            // Search on button click
+            searchButton.addEventListener('click', performSearch);
+            
+            // Search on Enter key
+            searchInput.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
                 }
             });
         });
