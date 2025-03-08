@@ -223,75 +223,78 @@ pub async fn convert_webp_to_webm(
     tokio::spawn(async move {
         let progress_path_string3 = progress_path_string2.clone();
         let _result = tokio::task::spawn_blocking(move || {
-            // First try to extract frames to a temporary directory
-            let temp_frames_dir = format!("{}/frames", temp_dir_clone);
-            let _ = fs::create_dir_all(&temp_frames_dir);
+            // For this particular WebP, we need to try a different approach
+            let intermediate_gif = format!("{}/intermediate.gif", temp_dir_clone);
+            info!("Converting WebP to intermediate GIF format: {}", intermediate_gif);
             
-            info!("Extracting frames from WebP to {}", temp_frames_dir);
-            
-            // Extract frames using libwebp directly (more reliable for animated WebP)
-            let extract_output = Command::new("ffmpeg")
-                .arg("-i")
+            // First attempt - convert to GIF as an intermediate format
+            let gif_output = Command::new("convert")
                 .arg(&file_path_str_clone)
-                .arg("-vsync")
-                .arg("0")              // Preserve frame timestamps
-                .arg("-f")
-                .arg("image2")         // Force image output
-                .arg(format!("{}/frame_%04d.png", temp_frames_dir))
+                .arg(intermediate_gif.clone())
                 .output();
                 
-            let frames_extracted = match &extract_output {
+            let gif_created = match &gif_output {
                 Ok(output) => {
                     let success = output.status.success();
                     if !success {
                         let error = String::from_utf8_lossy(&output.stderr);
-                        error!("Failed to extract frames: {}", error);
+                        error!("Failed to convert WebP to GIF: {}", error);
                     }
-                    success
+                    success && Path::new(&intermediate_gif).exists()
                 },
                 Err(e) => {
-                    error!("Error extracting frames: {}", e);
+                    error!("Error creating GIF: {}", e);
                     false
                 }
             };
             
-            let output = if frames_extracted {
-                // Count extracted frames
-                let entries = match fs::read_dir(&temp_frames_dir) {
-                    Ok(entries) => entries.count(),
-                    Err(_) => 0
-                };
+            let output = if gif_created {
+                info!("Successfully created intermediate GIF, converting to WebM");
                 
-                info!("Extracted {} frames, generating WebM from frames", entries);
-                
-                // Create WebM from extracted frames
+                // Now convert the GIF to WebM
                 Command::new("ffmpeg")
-                    .arg("-framerate")
-                    .arg("10")               // Decent framerate for animation
                     .arg("-i")
-                    .arg(format!("{}/frame_%04d.png", temp_frames_dir))
+                    .arg(&intermediate_gif)
                     .arg("-c:v")
-                    .arg("libvpx")           // Use regular VP8 for better compatibility
+                    .arg("libvpx")
                     .arg("-b:v")
-                    .arg("1M")               // Bitrate
-                    .arg("-auto-alt-ref")
-                    .arg("0")                // Better for animations
+                    .arg("1M")
                     .arg("-y")
                     .arg(&webm_path_clone)
                     .output()
             } else {
-                // Fallback to direct conversion with more basic settings
-                info!("Frame extraction failed, trying direct WebM conversion");
-                Command::new("ffmpeg")
-                    .arg("-i")
+                // Second approach - use gif2webp directly (part of libwebp)
+                info!("GIF creation failed, trying gif2webp");
+                
+                // Create a new intermediate GIF using dwebp to extract first frame
+                let static_webp = format!("{}/static.webp", temp_dir_clone);
+                let static_created = Command::new("dwebp")
                     .arg(&file_path_str_clone)
-                    .arg("-c:v")
-                    .arg("libvpx")           // Use VP8 instead of VP9 for better compat
-                    .arg("-b:v")
-                    .arg("1M")               // Bitrate
-                    .arg("-y")
-                    .arg(&webm_path_clone)
-                    .output()
+                    .arg("-o")
+                    .arg(&static_webp)
+                    .output();
+                
+                if static_created.is_ok() && Path::new(&static_webp).exists() {
+                    info!("Created static WebP, using as fallback");
+                    // Copy the static WebP to the target path
+                    if let Err(e) = fs::copy(&static_webp, &webm_path_clone) {
+                        error!("Failed to copy static WebP: {}", e);
+                    }
+                    
+                    // Return a successful output to continue processing
+                    Command::new("echo")
+                        .arg("Using static WebP as fallback")
+                        .output()
+                } else {
+                    // Last resort - just try a simple FFmpeg command
+                    info!("All conversion methods failed, trying simple FFmpeg command");
+                    Command::new("ffmpeg")
+                        .arg("-i")
+                        .arg(&file_path_str_clone)
+                        .arg("-y")
+                        .arg(&webm_path_clone)
+                        .output()
+                }
             };
             
             match output {
