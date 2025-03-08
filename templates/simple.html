@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Simple Test Template</h1>
+    <p>Theme: {{ theme }}</p>
+    <p>Page: {{ page }}</p>
+    <p>Total Pages: {{ total_pages }}</p>
+    <p>File Type: {{ file_type }}</p>
+    <p>Total Count: {{ total_count }}</p>
+
+    <h2>Image Data (first 3 items only)</h2>
+    {% for image in images | slice(end=3) %}
+        <div>
+            <p>Filename: {{ image.filename }}</p>
+            <p>Thumbnail: {{ image.thumbnail }}</p>
+            <p>Type: {{ image.file_type }}</p>
+            <p>Size: {{ image.size }}</p>
+            <p>Is Video: {{ image.is_video }}</p>
+            <p>Is Favorite: {{ image.is_favorite }}</p>
+            <hr>
+        </div>
+    {% endfor %}
+</body>
+</html>
