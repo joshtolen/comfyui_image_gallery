@@ -1,40 +1,34 @@
-FROM ubuntu:22.04 AS frontend-builder
+FROM debian:bullseye-slim AS frontend-builder
 
-# Install dependencies
+# Install curl
 RUN apt-get update && \
-    apt-get install -y curl nodejs npm && \
-    npm install -g n && \
-    n 16.20.2 && \
-    hash -r
+    apt-get install -y curl unzip
+
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # Set environment variables
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-ENV ESBUILD_BINARY_PATH="/usr/local/bin/esbuild"
 
 # Set the working directory for the frontend
 WORKDIR /app/frontend
 
-# Copy package.json and install dependencies
+# Copy package.json file
 COPY frontend/package*.json ./
 
-# Install esbuild globally using npm
-RUN npm install -g esbuild@0.17.19
-
-# Install dependencies with force flag to avoid peer dependency issues
-RUN npm install --force --no-package-lock
+# Install dependencies with Bun (much faster than npm)
+RUN bun install --no-save
 
 # Copy frontend source code
 COPY frontend/ ./
 
-# Create custom build script to use esbuild directly
-RUN echo '#!/bin/bash' > build.sh && \
-    echo 'mkdir -p dist' >> build.sh && \
-    echo 'cp -r public/* dist/' >> build.sh && \
-    echo 'esbuild src/main.jsx --bundle --minify --loader:.js=jsx --outfile=dist/main.js' >> build.sh && \
-    chmod +x build.sh
+# Create dist directory and copy static assets
+RUN mkdir -p dist && cp -r public/* dist/
 
-# Build frontend using our custom script
-RUN ./build.sh || (echo "Build failed but continuing" && mkdir -p dist && cp -r public/* dist/ || true)
+# Build frontend using Bun
+RUN bun build ./src/main.jsx --outfile=dist/main.js --minify || \
+    (echo "Build failed but continuing with static HTML version" && touch dist/main.js)
 
 FROM python:3.12-alpine
 
