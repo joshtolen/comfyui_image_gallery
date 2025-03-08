@@ -108,6 +108,10 @@ async fn index(
             continue;
         }
         
+        // Check for MP4 for backward compatibility
+        let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
+        let has_mp4 = mp4_path.exists();
+        
         // Determine source file (WebM or MP4 for animated WebP, with MP4 for backward compatibility)
         let source = if is_webp && has_webm {
             format!("{}.webm", filename)
@@ -117,9 +121,7 @@ async fn index(
             filename.clone()
         };
         
-        // Determine if this is a converted WebP - also check for MP4 for backward compatibility
-        let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
-        let has_mp4 = mp4_path.exists();
+        // Determine if this is a converted WebP
         let is_converted_webp = is_webp && (has_webm || has_mp4);
         
         // Check if it's a WebM
