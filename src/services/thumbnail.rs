@@ -113,10 +113,23 @@ pub async fn process_thumbnail_queue(
                 .unwrap_or_default();
             
             if extension == "webp" && webp::is_animated_webp(&file_path) {
-                // Start WebP to WebM conversion
-                match webp::convert_webp_to_webm(&file_path, &archive_dir, &thumbnail_dir).await {
-                    Ok(_) => info!("Converted WebP to WebM: {}", file),
-                    Err(e) => error!("Failed to convert WebP to WebM: {}: {}", file, e),
+                // Check if conversion has already failed
+                let failure_marker = format!("{}.conversion_failed", file_path.to_string_lossy());
+                if Path::new(&failure_marker).exists() {
+                    info!("Skipping previously failed conversion for: {}", file);
+                } else {
+                    // Start WebP to WebM conversion
+                    match webp::convert_webp_to_webm(&file_path, &archive_dir, &thumbnail_dir).await {
+                        Ok(Some(webm_path)) => {
+                            if webm_path.exists() {
+                                info!("Successfully converted WebP to WebM: {}", file);
+                            } else {
+                                error!("WebM file not created despite successful conversion: {}", file);
+                            }
+                        },
+                        Ok(None) => info!("WebP is not animated, no conversion needed: {}", file),
+                        Err(e) => error!("Failed to convert WebP to WebM: {}: {}", file, e),
+                    }
                 }
             }
             

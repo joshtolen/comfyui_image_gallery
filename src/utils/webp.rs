@@ -339,6 +339,16 @@ pub async fn convert_webp_to_webm(
                                 }
                             }
                             
+                            // Remove any existing failure marker
+                            let failed_marker = PathBuf::from(format!("{}.conversion_failed", file_path_str_clone));
+                            if failed_marker.exists() {
+                                if let Err(e) = fs::remove_file(&failed_marker) {
+                                    warn!("Failed to remove conversion failure marker: {}", e);
+                                } else {
+                                    info!("Removed previous conversion failure marker");
+                                }
+                            }
+                            
                             // Update progress to completed
                             update_progress(
                                 &PathBuf::from(progress_path_string2.clone()),
