@@ -22,8 +22,8 @@ tokio = { version = "1.33", features = ["full"] }
 # Image processing
 image = "0.24"
 
-# Video processing dependencies
-ffmpeg-next = "6.0"
+# We'll use Command to call ffmpeg directly instead of the Rust bindings
+# This simplifies the build process and avoids ffmpeg-sys-next dependencies
 
 # Utility
 futures = "0.3"

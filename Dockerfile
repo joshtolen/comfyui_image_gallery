@@ -3,7 +3,7 @@ FROM rust:1.81-slim as builder
 # Set the working directory
 WORKDIR /usr/src/comfyui_gallery
 
-# Install build dependencies
+# Install build dependencies including FFmpeg development packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     pkg-config \
@@ -11,6 +11,14 @@ RUN apt-get update && \
     build-essential \
     curl \
     ca-certificates \
+    ffmpeg \
+    libavformat-dev \
+    libavfilter-dev \
+    libavdevice-dev \
+    libavcodec-dev \
+    libavutil-dev \
+    libswscale-dev \
+    libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Cargo files to leverage Docker caching
