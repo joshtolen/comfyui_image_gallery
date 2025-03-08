@@ -233,7 +233,7 @@
                                     dark:from-white/5 dark:via-white/15 dark:to-white/5 bg-200% animate-shimmer pointer-events-none"></div>
                         
                         <!-- Conversion progress overlay (for all animated webp files) -->
-                        {% if image.filename.lower().endswith('.webp') %}
+                        {% if image.filename is containing(".webp") or image.filename is containing(".WEBP") %}
                         <div class="absolute bottom-0 left-0 w-full bg-black/70 p-1 z-20" data-filename="{{ image.filename }}">
                             <div class="w-full h-2.5 bg-white/20 rounded-sm overflow-hidden mb-1">
                                 <div class="progress-fill h-full bg-primary-dark w-0"></div>
