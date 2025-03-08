@@ -28,8 +28,10 @@ fn create_basic_placeholder_thumbnail(thumbnail_path: &Path) -> Result<()> {
     
     for y in center_y - icon_size / 2..center_y + icon_size / 2 {
         for x in center_x - icon_size / 2..center_x + icon_size / 2 {
-            // Simple triangle shape
-            if x >= center_x && (y - center_y).abs() < (x - center_x) {
+            // Simple triangle shape - convert u32 to i32 for abs()
+            let y_diff = y as i32 - center_y as i32;
+            let x_diff = x as i32 - center_x as i32;
+            if x >= center_x && y_diff.abs() < x_diff {
                 img.put_pixel(x, y, Rgba([255, 255, 255, 255]));
             }
         }

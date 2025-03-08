@@ -219,6 +219,7 @@ pub async fn convert_webp_to_webm(
     let filename_clone = filename.to_string();
     let archive_dir_string = archive_dir.to_string();
     
+    let temp_dir_for_cleanup = temp_dir.clone();
     tokio::spawn(async move {
         let progress_path_string3 = progress_path_string2.clone();
         let _result = tokio::task::spawn_blocking(move || {
@@ -372,7 +373,7 @@ pub async fn convert_webp_to_webm(
         }).await;
         
         // Clean up temp dir
-        if let Err(e) = fs::remove_dir_all(&temp_dir_clone) {
+        if let Err(e) = fs::remove_dir_all(&temp_dir_for_cleanup) {
             warn!("Failed to clean up temp directory: {}", e);
         }
         
