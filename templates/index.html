@@ -56,7 +56,7 @@
     </script>
     
     <!-- Preload critical assets -->
-    <link rel="preload" href="{{ url_for('static', filename='logo.png') }}" as="image">
+    <link rel="preload" href="/static/logo.png" as="image">
     
     <!-- Use modern lightweight PhotoSwipe instead of Fancybox -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.3.8/dist/photoswipe.min.css">
@@ -95,7 +95,7 @@
         <div class="flex justify-between items-center flex-wrap max-w-7xl mx-auto gap-4">
             <div class="flex-1 text-center">
                 <img class="max-w-[300px] h-auto mx-auto transition-transform duration-300 hover:scale-105" 
-                     src="{{ url_for('static', filename='logo.png') }}" 
+                     src="/static/logo.png" 
                      alt="ComfyUI Logo" width="400" height="100">
             </div>
             <div class="flex gap-4 items-center">
@@ -176,13 +176,13 @@
                                 data-filename="{{ image.filename }}"
                                 data-type="{{ image.type }}"
                                 data-size="{{ image.size }}"
-                                data-source="{{ url_for('static', filename='images/output/' + image.filename) }}"
+                                data-source="/static/images/output/{{ image.filename }}"
                                 aria-label="Show file information">
                             <span aria-hidden="true">ℹ️</span>
                         </button>
                         
                         <button class="download-icon w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 translate-x-2 transition-all hover:bg-green-600/90 hover:opacity-100 group-hover:opacity-80 group-hover:translate-x-0" 
-                                data-download-url="{{ url_for('static', filename='images/output/' + image.source) }}"
+                                data-download-url="/static/images/output/{{ image.source }}"
                                 aria-label="Download file">
                             <span aria-hidden="true">⬇️</span>
                         </button>
@@ -201,7 +201,7 @@
                     <a href="#"
                        class="block w-full h-full relative video-link"
                        data-filename="{{ image.filename }}"
-                       data-source="{{ url_for('static', filename='images/output/' + image.source) }}"
+                       data-source="/static/images/output/{{ image.source }}"
                        data-is-video="true">
                         
                         <!-- Video indicator -->
@@ -216,8 +216,8 @@
                         </div>
                         
                         <!-- Responsive image with lazy loading -->
-                        <img src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
-                             data-src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
+                        <img src="/static/thumbnails/{{ image.thumbnail }}"
+                             data-src="/static/thumbnails/{{ image.thumbnail }}"
                              alt="{{ image.filename }}"
                              loading="lazy"
                              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 {{ 'opacity-40' if not thumbnail_exists else '' }}"
@@ -240,14 +240,14 @@
                     </a>
                     {% else %}
                     <!-- For images - use PhotoSwipe -->
-                    <a href="{{ url_for('static', filename='images/output/' + image.source) }}"
+                    <a href="/static/images/output/{{ image.source }}"
                        class="block w-full h-full relative image-link"
                        data-pswp-width="1200" 
                        data-pswp-height="800">
                         
                         <!-- Responsive image with lazy loading -->
-                        <img src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
-                             data-src="{{ url_for('serve_thumbnail', filename=image.thumbnail) }}"
+                        <img src="/static/thumbnails/{{ image.thumbnail }}"
+                             data-src="/static/thumbnails/{{ image.thumbnail }}"
                              alt="{{ image.filename }}"
                              loading="lazy"
                              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 {{ 'opacity-40' if not thumbnail_exists else '' }}"
