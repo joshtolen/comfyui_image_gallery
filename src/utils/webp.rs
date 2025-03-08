@@ -126,8 +126,8 @@ fn count_anmf_chunks(buffer: &[u8]) -> usize {
     frame_count.max(1) // Return at least 1 frame
 }
 
-/// Convert a WebP animation to MP4
-pub async fn convert_webp_to_mp4(
+/// Convert a WebP animation to WebM
+pub async fn convert_webp_to_webm(
     file_path: &Path, 
     archive_dir: &str,
     thumbnail_dir: &str
@@ -136,15 +136,15 @@ pub async fn convert_webp_to_mp4(
     let filename = file_path.file_name()
         .ok_or_else(|| anyhow!("Invalid file path"))?.to_string_lossy();
     
-    info!("convert_webp_to_mp4 called for: {}", file_path_str);
+    info!("convert_webp_to_webm called for: {}", file_path_str);
     
-    // Define MP4 output path
-    let mp4_path = PathBuf::from(format!("{}.mp4", file_path_str));
+    // Define WebM output path
+    let webm_path = PathBuf::from(format!("{}.webm", file_path_str));
     
-    // Skip if the MP4 already exists
-    if mp4_path.exists() {
-        info!("MP4 already exists, skipping conversion: {}", mp4_path.display());
-        return Ok(Some(mp4_path));
+    // Skip if the WebM already exists
+    if webm_path.exists() {
+        info!("WebM already exists, skipping conversion: {}", webm_path.display());
+        return Ok(Some(webm_path));
     }
     
     // Verify it's an animated WebP
@@ -213,7 +213,7 @@ pub async fn convert_webp_to_mp4(
     // Run ffmpeg conversion in a separate thread to not block
     let tx_clone = tx.clone();
     let file_path_str_clone = file_path_str.clone();
-    let mp4_path_clone = mp4_path.clone();
+    let webm_path_clone = webm_path.clone();
     let temp_dir_clone = temp_dir.clone();
     let progress_path_string2 = progress_path.to_string_lossy().to_string();
     let filename_clone = filename.to_string();
@@ -222,20 +222,26 @@ pub async fn convert_webp_to_mp4(
     tokio::spawn(async move {
         let progress_path_string3 = progress_path_string2.clone();
         let _result = tokio::task::spawn_blocking(move || {
-            // Use ffmpeg directly for conversion
+            // Use ffmpeg to convert to WebM with optimized settings for animated content
             let output = Command::new("ffmpeg")
+                .arg("-analyzeduration")
+                .arg("10000000")  // Increase analyze duration
+                .arg("-probesize") 
+                .arg("10000000")  // Increase probe size
                 .arg("-i")
                 .arg(&file_path_str_clone)
                 .arg("-c:v")
-                .arg("libx264")
+                .arg("libvpx-vp9")  // Use VP9 codec
+                .arg("-b:v")
+                .arg("1M")          // Bitrate
                 .arg("-pix_fmt")
-                .arg("yuv420p")
-                .arg("-movflags")
-                .arg("+faststart")
+                .arg("yuva420p")    // Support alpha channel
+                .arg("-auto-alt-ref") 
+                .arg("0")           // Disable alternative reference frames for animation
                 .arg("-crf")
-                .arg("23")
+                .arg("30")          // Quality level
                 .arg("-y")
-                .arg(&mp4_path_clone)
+                .arg(&webm_path_clone)
                 .output();
             
             match output {
@@ -243,11 +249,11 @@ pub async fn convert_webp_to_mp4(
                     if output.status.success() {
                         tx_clone.try_send(100).unwrap_or_default();
                         
-                        // Copy file timestamps from the original WebP to the MP4
+                        // Copy file timestamps from the original WebP to the WebM
                         if let Ok(webp_metadata) = fs::metadata(&file_path_str_clone) {
                             if let Ok(webp_modified) = webp_metadata.modified() {
                                 // Ignore errors as this is not critical
-                                let _ = filetime::set_file_mtime(&mp4_path_clone, filetime::FileTime::from_system_time(webp_modified));
+                                let _ = filetime::set_file_mtime(&webm_path_clone, filetime::FileTime::from_system_time(webp_modified));
                             }
                         }
                         
@@ -326,10 +332,10 @@ pub async fn convert_webp_to_mp4(
         let _ = fs::remove_file(&PathBuf::from(progress_path_string3));
     });
     
-    Ok(Some(mp4_path))
+    Ok(Some(webm_path))
 }
 
-/// Update the progress of WebP to MP4 conversion
+/// Update the progress of WebP to WebM conversion
 fn update_progress(
     progress_path: &Path,
     status: &str,

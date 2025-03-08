@@ -97,10 +97,10 @@ pub async fn process_thumbnail_queue(
                 .unwrap_or_default();
             
             if extension == "webp" && webp::is_animated_webp(&file_path) {
-                // Start WebP to MP4 conversion
-                match webp::convert_webp_to_mp4(&file_path, &archive_dir, &thumbnail_dir).await {
-                    Ok(_) => info!("Converted WebP to MP4: {}", file),
-                    Err(e) => error!("Failed to convert WebP to MP4: {}: {}", file, e),
+                // Start WebP to WebM conversion
+                match webp::convert_webp_to_webm(&file_path, &archive_dir, &thumbnail_dir).await {
+                    Ok(_) => info!("Converted WebP to WebM: {}", file),
+                    Err(e) => error!("Failed to convert WebP to WebM: {}: {}", file, e),
                 }
             }
             
