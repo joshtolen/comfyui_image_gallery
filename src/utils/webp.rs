@@ -306,52 +306,79 @@ pub async fn convert_webp_to_webm(
                 }
             };
             
-            match output {
+            let conversion_success = match output {
                 Ok(output) => {
                     if output.status.success() {
                         tx_clone.try_send(100).unwrap_or_default();
                         
-                        // Copy file timestamps from the original WebP to the WebM
-                        if let Ok(webp_metadata) = fs::metadata(&file_path_str_clone) {
-                            if let Ok(webp_modified) = webp_metadata.modified() {
-                                // Ignore errors as this is not critical
-                                let _ = filetime::set_file_mtime(&webm_path_clone, filetime::FileTime::from_system_time(webp_modified));
+                        // Verify the output file exists and is valid
+                        if webm_path_clone.exists() && fs::metadata(&webm_path_clone).map(|m| m.len() > 0).unwrap_or(false) {
+                            // Copy file timestamps from the original WebP to the WebM
+                            if let Ok(webp_metadata) = fs::metadata(&file_path_str_clone) {
+                                if let Ok(webp_modified) = webp_metadata.modified() {
+                                    // Ignore errors as this is not critical
+                                    let _ = filetime::set_file_mtime(&webm_path_clone, filetime::FileTime::from_system_time(webp_modified));
+                                }
                             }
-                        }
-                        
-                        // Move original WebP to archive
-                        let filename = Path::new(&file_path_str_clone).file_name().unwrap_or_default();
-                        let archive_path = PathBuf::from(&archive_dir_string).join(filename);
-                        
-                        if let Some(parent) = archive_path.parent() {
-                            let _ = fs::create_dir_all(parent);
-                        }
-                        
-                        if let Err(e) = fs::rename(&file_path_str_clone, &archive_path) {
-                            warn!("Failed to move WebP to archive: {}", e);
-                            // Try copying instead
-                            if let Err(e) = fs::copy(&file_path_str_clone, &archive_path) {
-                                warn!("Failed to copy WebP to archive: {}", e);
-                            } else {
-                                let _ = fs::remove_file(&file_path_str_clone);
+                            
+                            // Move original WebP to archive
+                            let filename = Path::new(&file_path_str_clone).file_name().unwrap_or_default();
+                            let archive_path = PathBuf::from(&archive_dir_string).join(filename);
+                            
+                            if let Some(parent) = archive_path.parent() {
+                                let _ = fs::create_dir_all(parent);
                             }
+                            
+                            if let Err(e) = fs::rename(&file_path_str_clone, &archive_path) {
+                                warn!("Failed to move WebP to archive: {}", e);
+                                // Try copying instead
+                                if let Err(e) = fs::copy(&file_path_str_clone, &archive_path) {
+                                    warn!("Failed to copy WebP to archive: {}", e);
+                                } else {
+                                    let _ = fs::remove_file(&file_path_str_clone);
+                                }
+                            }
+                            
+                            // Update progress to completed
+                            update_progress(
+                                &PathBuf::from(progress_path_string2.clone()),
+                                "completed",
+                                Some(100),
+                                Some(100),
+                                None,
+                                Some(&filename_clone),
+                                Some(true),
+                            ).unwrap_or_else(|e| warn!("Failed to update progress: {}", e));
+                            
+                            true
+                        } else {
+                            error!("WebM file is empty or doesn't exist despite successful command");
+                            
+                            // Remove the empty or invalid file if it exists
+                            if webm_path_clone.exists() {
+                                let _ = fs::remove_file(&webm_path_clone);
+                            }
+                            
+                            update_progress(
+                                &PathBuf::from(&progress_path_string2),
+                                "error",
+                                None,
+                                None,
+                                Some("Generated file is invalid or empty"),
+                                Some(&filename_clone),
+                                None,
+                            ).unwrap_or_else(|e| warn!("Failed to update progress: {}", e));
+                            
+                            false
                         }
-                        
-                        // Update progress to completed
-                        update_progress(
-                            &PathBuf::from(progress_path_string2.clone()),
-                            "completed",
-                            Some(100),
-                            Some(100),
-                            None,
-                            Some(&filename_clone),
-                            Some(true),
-                        ).unwrap_or_else(|e| warn!("Failed to update progress: {}", e));
-                        
-                        true
                     } else {
                         let error = String::from_utf8_lossy(&output.stderr).to_string();
                         error!("FFmpeg error: {}", error);
+                        
+                        // Remove any partial output file
+                        if webm_path_clone.exists() {
+                            let _ = fs::remove_file(&webm_path_clone);
+                        }
                         
                         update_progress(
                             &PathBuf::from(&progress_path_string2),
@@ -369,6 +396,11 @@ pub async fn convert_webp_to_webm(
                 Err(e) => {
                     error!("Failed to execute ffmpeg: {}", e);
                     
+                    // Remove any partial output file
+                    if webm_path_clone.exists() {
+                        let _ = fs::remove_file(&webm_path_clone);
+                    }
+                    
                     update_progress(
                         &PathBuf::from(&progress_path_string2),
                         "error",
@@ -381,6 +413,13 @@ pub async fn convert_webp_to_webm(
                     
                     false
                 }
+            };
+            
+            // If all conversion attempts failed, create a failed marker file
+            if !conversion_success {
+                let failed_marker = PathBuf::from(format!("{}.conversion_failed", file_path_str_clone));
+                let _ = fs::write(&failed_marker, "Conversion failed after multiple attempts");
+                info!("Created conversion failure marker: {}", failed_marker.display());
             }
         }).await;
         

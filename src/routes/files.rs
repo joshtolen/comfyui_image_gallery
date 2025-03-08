@@ -218,12 +218,15 @@ async fn check_file_status(
     let original_path = Path::new(&data.file_dir).join(&filename);
     let archive_path = Path::new(&data.archive_dir).join(&filename);
     let webm_path = Path::new(&data.file_dir).join(format!("{}.webm", filename));
+    let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename)); // For backward compatibility
+    let failed_marker = Path::new(&data.file_dir).join(format!("{}.conversion_failed", filename));
     
     let status = FileStatus {
         filename: filename.clone(),
         exists_in_original: original_path.exists(),
         exists_in_archive: archive_path.exists(),
-        exists_as_mp4: webm_path.exists(), // Field name still mp4 for backward compatibility
+        exists_as_mp4: webm_path.exists() || mp4_path.exists(), // Check both WebM and MP4
+        conversion_failed: failed_marker.exists(),
     };
     
     HttpResponse::Ok().json(status)
@@ -256,20 +259,33 @@ async fn conversion_progress(
         }
     }
     
-    // Check if WebM already exists or WebP is in archive
+    // Check if WebM/MP4 already exists, WebP is in archive, or conversion has failed
     let webm_path = Path::new(&data.file_dir).join(format!("{}.webm", filename));
+    let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename)); // For backward compatibility
     let archive_path = Path::new(&data.archive_dir).join(&filename);
+    let failed_marker = Path::new(&data.file_dir).join(format!("{}.conversion_failed", filename));
     
     info!("No progress file, checking if WebM exists: {}", webm_path.display());
+    info!("Checking if MP4 exists: {}", mp4_path.display());
     info!("Checking if file is in archive: {}", archive_path.display());
+    info!("Checking if conversion failed: {}", failed_marker.display());
     
-    if webm_path.exists() || archive_path.exists() {
+    if webm_path.exists() || mp4_path.exists() || archive_path.exists() {
         return HttpResponse::Ok().json(serde_json::json!({
             "status": "completed",
             "progress": 100,
             "total": 100,
             "filename": filename,
             "archived": archive_path.exists()
+        }));
+    }
+    
+    if failed_marker.exists() {
+        return HttpResponse::Ok().json(serde_json::json!({
+            "status": "error",
+            "error": "Conversion failed after multiple attempts",
+            "filename": filename,
+            "conversion_failed": true
         }));
     }
     

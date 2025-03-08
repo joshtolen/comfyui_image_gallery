@@ -71,6 +71,10 @@ pub struct FileStatus {
     /// Flag indicating if the file exists in the archive directory
     pub exists_in_archive: bool,
     
-    /// Flag indicating if the file exists as an MP4 (for converted WebPs)
+    /// Flag indicating if the file exists as an MP4 or WebM (for converted WebPs)
     pub exists_as_mp4: bool,
+    
+    /// Flag indicating if conversion attempts have failed
+    #[serde(default)]
+    pub conversion_failed: bool,
 }
