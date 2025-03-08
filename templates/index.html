@@ -297,6 +297,198 @@
         body.dark footer {
             border-top-color: var(--border-dark);
         }
+        
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            cursor: pointer;
+        }
+        
+        .modal-container {
+            position: relative;
+            background-color: var(--light-card);
+            border-radius: 10px;
+            overflow: hidden;
+            width: 85%;
+            max-width: 1000px;
+            max-height: 85vh;
+            z-index: 1001;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        
+        body.dark .modal-container {
+            background-color: var(--dark-card);
+        }
+        
+        .modal.open .modal-container {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        body.dark .modal-header {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--light-text);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .modal-close:hover {
+            opacity: 1;
+        }
+        
+        body.dark .modal-close {
+            color: var(--dark-text);
+        }
+        
+        .modal-content {
+            padding: 20px;
+            overflow: auto;
+        }
+        
+        /* Image modal specific */
+        .modal-container img {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        /* Video modal specific */
+        .video-container {
+            max-width: 1200px;
+        }
+        
+        #video-player {
+            width: 100%;
+            max-height: 70vh;
+        }
+        
+        /* Info modal specific */
+        .info-container {
+            max-width: 500px;
+        }
+        
+        .info-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+        }
+        
+        body.dark .info-item {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-item strong {
+            width: 100px;
+            display: block;
+        }
+        
+        /* Multi-select controls */
+        .multi-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 90;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .multi-controls.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .multi-controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .multi-controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Checkbox for multi-select */
+        .card .checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 5;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .card:hover .checkbox,
+        .checkbox:checked {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="{% if theme == 'dark' %}dark{% else %}light{% endif %}">
@@ -329,13 +521,14 @@
     <div id="gallery" class="gallery" style="display: none;">
         {% for image in images %}
             <div class="card">
+                <input type="checkbox" class="checkbox" data-filename="{{ image.filename }}">
                 {% if image.is_video %}
-                    <a href="#" class="video-link" data-source="/static/images/output/{{ image.source }}">
+                    <a href="#" class="video-link" data-source="/static/images/output/{{ image.source }}" data-filename="{{ image.filename }}">
                         <div class="video-indicator">▶️</div>
                         <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
                     </a>
                 {% else %}
-                    <a href="/static/images/output/{{ image.source }}" class="image-link">
+                    <a href="#" class="image-link" data-source="/static/images/output/{{ image.source }}" data-filename="{{ image.filename }}">
                         <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
                     </a>
                 {% endif %}
@@ -382,16 +575,77 @@
         {% endif %}
     </div>
     
+    <!-- Modal components -->
+    <div id="image-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="modal-title">Image Viewer</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <img id="modal-image" src="" alt="Large preview">
+            </div>
+        </div>
+    </div>
+
+    <div id="video-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-container video-container">
+            <div class="modal-header">
+                <h3 id="video-title">Video Player</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <video id="video-player" controls>
+                    <source id="video-source" src="" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <div id="info-modal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-container info-container">
+            <div class="modal-header">
+                <h3>File Information</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="info-item">
+                    <strong>Filename:</strong>
+                    <span id="info-filename"></span>
+                </div>
+                <div class="info-item">
+                    <strong>Size:</strong>
+                    <span id="info-size"></span>
+                </div>
+                <div class="info-item">
+                    <strong>Type:</strong>
+                    <span id="info-type"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Theme toggle button -->
     <button id="theme-toggle" class="theme-toggle">
         {% if theme == 'dark' %}☀️{% else %}🌙{% endif %}
     </button>
+
+    <!-- Multi-select controls -->
+    <div id="multi-select-controls" class="multi-controls">
+        <button id="select-all-btn">Select All</button>
+        <button id="deselect-all-btn">Deselect All</button>
+        <button id="delete-selected-btn">Delete Selected</button>
+        <span id="selected-count">0 selected</span>
+    </div>
     
     <footer>
         <p>ComfyUI Gallery v2.0 | All images are copyrighted © 2023-2025</p>
     </footer>
     
-    <!-- Basic JavaScript -->
+    <!-- Enhanced JavaScript -->
     <script>
         // Show gallery when images are loaded
         document.addEventListener('DOMContentLoaded', function() {
@@ -400,6 +654,30 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('gallery').style.display = 'grid';
             }, 500);
+            
+            // Modal handling functions
+            function openModal(modalId) {
+                document.getElementById(modalId).classList.add('open');
+            }
+            
+            function closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('open');
+            }
+            
+            // Close all modals when clicking on overlay or close button
+            document.querySelectorAll('.modal-overlay, .modal-close').forEach(function(elem) {
+                elem.addEventListener('click', function() {
+                    document.querySelectorAll('.modal').forEach(function(modal) {
+                        modal.classList.remove('open');
+                    });
+                    
+                    // Pause video if it's playing
+                    const videoPlayer = document.getElementById('video-player');
+                    if (videoPlayer) {
+                        videoPlayer.pause();
+                    }
+                });
+            });
             
             // Theme toggle
             const themeToggle = document.getElementById('theme-toggle');
@@ -420,15 +698,76 @@
                         
                         // Update toggle button text
                         themeToggle.innerHTML = data.theme === 'dark' ? '☀️' : '🌙';
-                        
-                        // Reload page to apply theme fully
-                        window.location.reload();
                     });
                 });
             }
             
+            // Image Modal
+            document.querySelectorAll('.image-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const imageUrl = this.getAttribute('data-source');
+                    const filename = this.getAttribute('data-filename');
+                    
+                    // Set image source and title
+                    document.getElementById('modal-image').src = imageUrl;
+                    document.getElementById('modal-title').textContent = filename;
+                    
+                    // Open modal
+                    openModal('image-modal');
+                });
+            });
+            
+            // Video Modal
+            document.querySelectorAll('.video-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const videoUrl = this.getAttribute('data-source');
+                    const filename = this.getAttribute('data-filename');
+                    
+                    // Set video source and title
+                    document.getElementById('video-source').src = videoUrl;
+                    document.getElementById('video-title').textContent = filename;
+                    
+                    // Reload the video player with new source
+                    const videoPlayer = document.getElementById('video-player');
+                    videoPlayer.load();
+                    
+                    // Open modal
+                    openModal('video-modal');
+                    
+                    // Auto-play video after a short delay
+                    setTimeout(() => videoPlayer.play(), 300);
+                });
+            });
+            
+            // Info Modal
+            document.querySelectorAll('.info-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const filename = this.getAttribute('data-filename');
+                    const fileSize = this.getAttribute('data-size');
+                    const fileType = this.getAttribute('data-type');
+                    
+                    // Set info fields
+                    document.getElementById('info-filename').textContent = filename;
+                    document.getElementById('info-size').textContent = fileSize;
+                    document.getElementById('info-type').textContent = fileType;
+                    
+                    // Open modal
+                    openModal('info-modal');
+                });
+            });
+            
             // Favorite buttons
             document.querySelectorAll('.favorite-btn').forEach(function(btn) {
+                const isFavorite = btn.getAttribute('data-favorite') === 'true';
+                btn.innerHTML = isFavorite ? '⭐' : '☆';
+                
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -451,6 +790,24 @@
                             is_favorite: !isFavorite
                         })
                     });
+                });
+            });
+            
+            // Download buttons
+            document.querySelectorAll('.download-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const url = this.getAttribute('data-url');
+                    
+                    // Create a temporary link to download
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = url.split('/').pop();
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 });
             });
             
@@ -478,21 +835,93 @@
                                 // Remove the card from the gallery
                                 this.closest('.card').remove();
                             } else {
-                                alert('Error: ' + data.message);
+                                alert('Error: ' + (data.message || 'Could not delete file'));
                             }
                         });
                     }
                 });
             });
             
-            // Video links
-            document.querySelectorAll('.video-link').forEach(function(link) {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const videoUrl = this.getAttribute('data-source');
-                    window.open(videoUrl, '_blank');
+            // Multi-select functionality
+            const checkboxes = document.querySelectorAll('.checkbox');
+            const multiControls = document.getElementById('multi-select-controls');
+            const selectedCounter = document.getElementById('selected-count');
+            
+            // Update selected count and display/hide controls
+            function updateMultiControls() {
+                const checkedCount = document.querySelectorAll('.checkbox:checked').length;
+                selectedCounter.textContent = checkedCount + ' selected';
+                
+                if (checkedCount > 0) {
+                    multiControls.classList.add('visible');
+                } else {
+                    multiControls.classList.remove('visible');
+                }
+            }
+            
+            // Add event listeners to checkboxes
+            checkboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', updateMultiControls);
+                
+                // Prevent click event from bubbling to the card
+                checkbox.addEventListener('click', function(e) {
+                    e.stopPropagation();
                 });
+            });
+            
+            // Select all button
+            document.getElementById('select-all-btn').addEventListener('click', function() {
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                });
+                updateMultiControls();
+            });
+            
+            // Deselect all button
+            document.getElementById('deselect-all-btn').addEventListener('click', function() {
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                });
+                updateMultiControls();
+            });
+            
+            // Delete selected button
+            document.getElementById('delete-selected-btn').addEventListener('click', function() {
+                const selectedFiles = [];
+                document.querySelectorAll('.checkbox:checked').forEach(function(checkbox) {
+                    selectedFiles.push(checkbox.getAttribute('data-filename'));
+                });
+                
+                if (selectedFiles.length === 0) {
+                    alert('No files selected');
+                    return;
+                }
+                
+                if (confirm(`Are you sure you want to delete ${selectedFiles.length} files?`)) {
+                    fetch('/delete-files', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            files: selectedFiles
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the cards from the gallery
+                            document.querySelectorAll('.checkbox:checked').forEach(function(checkbox) {
+                                checkbox.closest('.card').remove();
+                            });
+                            
+                            // Update controls
+                            updateMultiControls();
+                        } else {
+                            alert('Error: ' + (data.message || 'Could not delete files'));
+                        }
+                    });
+                }
             });
         });
     </script>
