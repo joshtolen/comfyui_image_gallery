@@ -26,9 +26,11 @@ COPY frontend/ ./
 # Create dist directory and copy static assets
 RUN mkdir -p dist && cp -r public/* dist/
 
-# Build frontend using Bun
-RUN bun build ./src/main.jsx --outfile=dist/main.js --minify || \
-    (echo "Build failed but continuing with static HTML version" && touch dist/main.js)
+# Use our simplified main file without Tailwind imports
+RUN cp src/main-simple.jsx src/main.jsx
+
+# Build frontend using Bun with proper output directory
+RUN bun build ./src/main.jsx --outdir=dist --minify
 
 FROM python:3.12-alpine
 
