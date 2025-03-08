@@ -28,7 +28,7 @@ COPY Cargo.toml .
 RUN mkdir -p src && \
     echo "fn main() {println!(\"Hello, world!\");}" > src/main.rs && \
     cargo build --release && \
-    rm -rf src
+    rm -rf src target/release/deps/comfyui_image_gallery*
 
 # Copy the real source code
 COPY src/ src/
