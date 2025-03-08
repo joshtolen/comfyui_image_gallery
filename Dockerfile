@@ -13,14 +13,12 @@ WORKDIR /app/frontend
 # Copy package.json and install dependencies
 COPY frontend/package*.json ./
 
-# Install dependencies with npm ci for reproducible builds
-RUN npm ci
+# Install dependencies
+RUN npm install --no-package-lock
 
-# Create a Rollup patch to skip the native plugin
-RUN mkdir -p /tmp/rollup-patch && \
-    echo 'module.exports = {};' > /tmp/rollup-patch/empty.js && \
-    mkdir -p node_modules/rollup/dist && \
-    cp /tmp/rollup-patch/empty.js node_modules/rollup/dist/native.js || true
+# Override problematic module
+RUN mkdir -p node_modules/rollup/dist && \
+    echo 'module.exports = {};' > node_modules/rollup/dist/native.js
 
 # Copy frontend source code
 COPY frontend/ ./
