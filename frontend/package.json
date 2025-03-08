@@ -2,9 +2,9 @@
   "name": "comfyui-gallery-frontend",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "esbuild src/main.jsx --bundle --sourcemap --loader:.js=jsx --outdir=dist --watch",
+    "build": "mkdir -p dist && esbuild src/main.jsx --bundle --minify --loader:.js=jsx --outdir=dist",
+    "preview": "echo 'Preview not available with esbuild'"
   },
   "keywords": [],
   "author": "",
@@ -19,10 +19,8 @@
     "react-router-dom": "6.18.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "4.0.0",
-    "autoprefixer": "10.4.14",
+    "esbuild": "0.17.19",
     "postcss": "8.4.24",
-    "tailwindcss": "3.3.2",
-    "vite": "4.3.9"
+    "tailwindcss": "3.3.2"
   }
 }
