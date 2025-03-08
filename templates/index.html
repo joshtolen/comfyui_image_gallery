@@ -454,6 +454,14 @@
         #video-player {
             width: 100%;
             max-height: 70vh;
+            background-color: #000;
+        }
+        
+        #direct-video-link {
+            color: var(--primary-color);
+            text-decoration: underline;
+            display: inline-block;
+            margin-top: 10px;
         }
         
         /* Info modal specific */
@@ -724,6 +732,7 @@
             <div class="modal-content">
                 <video id="video-player" controls>
                     <source id="video-source" src="" type="video/mp4">
+                    Your browser doesn't support HTML5 video. <a id="direct-video-link" href="" target="_blank">Open video directly</a>
                 </video>
             </div>
         </div>
@@ -852,19 +861,46 @@
                     const videoUrl = this.getAttribute('data-source');
                     const filename = this.getAttribute('data-filename');
                     
+                    // Determine video MIME type based on extension
+                    let mimeType = 'video/mp4'; // Default
+                    if (videoUrl.toLowerCase().endsWith('.webm')) {
+                        mimeType = 'video/webm';
+                    } else if (videoUrl.toLowerCase().endsWith('.mkv')) {
+                        mimeType = 'video/x-matroska';
+                    } else if (videoUrl.toLowerCase().endsWith('.avi')) {
+                        mimeType = 'video/x-msvideo';
+                    } else if (videoUrl.toLowerCase().endsWith('.mov')) {
+                        mimeType = 'video/quicktime';
+                    }
+                    
+                    console.log('Loading video:', videoUrl, 'with MIME type:', mimeType);
+                    
                     // Set video source and title
-                    document.getElementById('video-source').src = videoUrl;
+                    const videoSource = document.getElementById('video-source');
+                    videoSource.src = videoUrl;
+                    videoSource.type = mimeType;
+                    
+                    // Set direct link for fallback
+                    document.getElementById('direct-video-link').href = videoUrl;
                     document.getElementById('video-title').textContent = filename;
                     
                     // Reload the video player with new source
                     const videoPlayer = document.getElementById('video-player');
                     videoPlayer.load();
+                    console.log('Video player loaded with src:', videoSource.src);
                     
                     // Open modal
                     openModal('video-modal');
                     
                     // Auto-play video after a short delay
-                    setTimeout(() => videoPlayer.play(), 300);
+                    setTimeout(() => {
+                        try {
+                            videoPlayer.play()
+                                .catch(err => console.error('Failed to play video:', err));
+                        } catch (err) {
+                            console.error('Video playback error:', err);
+                        }
+                    }, 300);
                 });
             });
             
