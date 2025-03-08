@@ -545,50 +545,7 @@
             opacity: 1;
         }
         
-        /* Conversion progress styles */
-        .conversion-progress {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 8px;
-            z-index: 6;
-            transform: translateY(100%);
-            transition: transform 0.3s;
-        }
-        
-        .card:hover .conversion-progress {
-            transform: translateY(0);
-        }
-        
-        .conversion-progress.converting {
-            transform: translateY(0);
-        }
-        
-        .progress-bar {
-            height: 8px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 4px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background-color: var(--primary-color);
-            width: 0%;
-            transition: width 0.5s ease;
-        }
-        
-        .progress-text {
-            color: white;
-            font-size: 10px;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        /* Conversion progress styles removed */
         
         /* No results message */
         .no-results {
@@ -659,14 +616,7 @@
                 
                 <div class="filename">{{ image.filename | truncate(length=30) }}</div>
                 
-                {% if image.filename is containing(".webp") or image.filename is containing(".WEBP") %}
-                <div class="conversion-progress" data-filename="{{ image.filename }}">
-                    <div class="progress-bar">
-                        <div class="progress-fill"></div>
-                    </div>
-                    <div class="progress-text">Checking...</div>
-                </div>
-                {% endif %}
+                <!-- WebP conversion progress tracking removed -->
                 
                 <div class="actions">
                     <div class="action-btn favorite-btn" data-filename="{{ image.filename }}" data-favorite="{{ image.is_favorite | default(value=false) }}">
@@ -730,10 +680,14 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-content">
-                <video id="video-player" controls>
-                    <source id="video-source" src="" type="video/mp4">
-                    Your browser doesn't support HTML5 video. <a id="direct-video-link" href="" target="_blank">Open video directly</a>
-                </video>
+                <div id="video-container">
+                    <video id="video-player" controls>
+                        <source id="video-source" src="" type="video/mp4">
+                        Your browser doesn't support HTML5 video. <a id="direct-video-link" href="" target="_blank">Open video directly</a>
+                    </video>
+                    <!-- For animated WebP files -->
+                    <img id="webp-player" style="display:none; max-width:100%; max-height:70vh;" src="" alt="Animated WebP">
+                </div>
             </div>
         </div>
     </div>
@@ -810,6 +764,12 @@
                     if (videoPlayer) {
                         videoPlayer.pause();
                     }
+                    
+                    // Clear WebP image if it's displaying
+                    const webpPlayer = document.getElementById('webp-player');
+                    if (webpPlayer) {
+                        webpPlayer.src = '';
+                    }
                 });
             });
             
@@ -871,36 +831,52 @@
                         mimeType = 'video/x-msvideo';
                     } else if (videoUrl.toLowerCase().endsWith('.mov')) {
                         mimeType = 'video/quicktime';
+                    } else if (videoUrl.toLowerCase().endsWith('.webp')) {
+                        mimeType = 'image/webp';
                     }
                     
                     console.log('Loading video:', videoUrl, 'with MIME type:', mimeType);
                     
-                    // Set video source and title
-                    const videoSource = document.getElementById('video-source');
-                    videoSource.src = videoUrl;
-                    videoSource.type = mimeType;
-                    
-                    // Set direct link for fallback
-                    document.getElementById('direct-video-link').href = videoUrl;
+                    // Set title
                     document.getElementById('video-title').textContent = filename;
+                    document.getElementById('direct-video-link').href = videoUrl;
                     
-                    // Reload the video player with new source
                     const videoPlayer = document.getElementById('video-player');
-                    videoPlayer.load();
-                    console.log('Video player loaded with src:', videoSource.src);
+                    const webpPlayer = document.getElementById('webp-player');
+                    
+                    // Handle animated WebP files differently
+                    if (videoUrl.toLowerCase().endsWith('.webp')) {
+                        // Use the img element for WebP
+                        videoPlayer.style.display = 'none';
+                        webpPlayer.style.display = 'block';
+                        webpPlayer.src = videoUrl;
+                        console.log('WebP image loaded with src:', videoUrl);
+                    } else {
+                        // For regular videos, use the video player
+                        webpPlayer.style.display = 'none';
+                        videoPlayer.style.display = 'block';
+                        
+                        const videoSource = document.getElementById('video-source');
+                        videoSource.src = videoUrl;
+                        videoSource.type = mimeType;
+                        
+                        // Reload the video player with new source
+                        videoPlayer.load();
+                        console.log('Video player loaded with src:', videoSource.src);
+                        
+                        // Auto-play video after a short delay
+                        setTimeout(() => {
+                            try {
+                                videoPlayer.play()
+                                    .catch(err => console.error('Failed to play video:', err));
+                            } catch (err) {
+                                console.error('Video playback error:', err);
+                            }
+                        }, 300);
+                    }
                     
                     // Open modal
                     openModal('video-modal');
-                    
-                    // Auto-play video after a short delay
-                    setTimeout(() => {
-                        try {
-                            videoPlayer.play()
-                                .catch(err => console.error('Failed to play video:', err));
-                        } catch (err) {
-                            console.error('Video playback error:', err);
-                        }
-                    }, 300);
                 });
             });
             
@@ -1101,115 +1077,7 @@
                 }
             });
             
-            // WebP Conversion Progress Tracking
-            const conversionBars = document.querySelectorAll('.conversion-progress');
-            const conversionStatus = {};
-            
-            // Initialize conversion progress tracking
-            conversionBars.forEach(function(bar) {
-                const filename = bar.getAttribute('data-filename');
-                conversionStatus[filename] = {
-                    element: bar,
-                    progressBar: bar.querySelector('.progress-fill'),
-                    progressText: bar.querySelector('.progress-text'),
-                    isComplete: false,
-                    lastChecked: 0,
-                    inQueue: false
-                };
-            });
-            
-            // Function to update all conversion progress
-            function updateConversionProgress() {
-                const now = Date.now();
-                
-                Object.keys(conversionStatus).forEach(function(filename) {
-                    const item = conversionStatus[filename];
-                    
-                    // Skip completed items
-                    if (item.isComplete) {
-                        return;
-                    }
-                    
-                    // Throttle API calls (check every 2 seconds)
-                    if (now - item.lastChecked < 2000) {
-                        return;
-                    }
-                    
-                    item.lastChecked = now;
-                    
-                    // Fetch progress from server
-                    fetch('/conversion-progress/' + encodeURIComponent(filename))
-                        .then(response => response.json())
-                        .then(data => {
-                            if (!data) return;
-                            
-                            const statusElement = item.element;
-                            const progressBar = item.progressBar;
-                            const progressText = item.progressText;
-                            
-                            // Handle different states
-                            if (data.status === 'completed') {
-                                progressBar.style.width = '100%';
-                                progressText.textContent = 'Conversion complete';
-                                item.isComplete = true;
-                                
-                                // Show "Complete" for 3 seconds then hide
-                                statusElement.classList.add('converting');
-                                setTimeout(() => {
-                                    statusElement.classList.remove('converting');
-                                    
-                                    // After a delay, reload the page to show the new MP4
-                                    setTimeout(() => {
-                                        if (data.archived) {
-                                            window.location.reload();
-                                        }
-                                    }, 1000);
-                                }, 3000);
-                            }
-                            else if (data.status === 'error') {
-                                progressBar.style.width = '100%';
-                                progressBar.style.backgroundColor = '#e74c3c';
-                                progressText.textContent = 'Error: ' + (data.error || 'Unknown error');
-                                statusElement.classList.add('converting');
-                                item.isComplete = true;
-                            }
-                            else if (data.status === 'not_started') {
-                                if (data.in_queue) {
-                                    statusElement.classList.add('converting');
-                                    progressText.textContent = 'Waiting in queue...';
-                                    item.inQueue = true;
-                                } else {
-                                    // Not a webp that needs conversion
-                                    item.isComplete = true;
-                                }
-                            }
-                            else if (data.status === 'extracting_frames') {
-                                statusElement.classList.add('converting');
-                                const percent = Math.round((data.progress / data.total) * 100) || 0;
-                                progressBar.style.width = `${percent}%`;
-                                progressText.textContent = `Extracting frames: ${data.progress || 0}/${data.total || 0}`;
-                            }
-                            else if (data.status === 'encoding_video') {
-                                statusElement.classList.add('converting');
-                                const percent = Math.round((data.progress / data.total) * 100) || 0;
-                                progressBar.style.width = `${percent}%`;
-                                progressText.textContent = `Encoding video: ${percent}%`;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error checking conversion progress:', error);
-                        });
-                });
-            }
-            
-            // Start checking progress if there are items to track
-            if (Object.keys(conversionStatus).length > 0) {
-                // Initial check
-                updateConversionProgress();
-                
-                // Set interval to check every 2 seconds
-                setInterval(updateConversionProgress, 2000);
-            }
+            // WebP Conversion Progress Tracking removed - all WebP files are displayed directly
             
             // Search functionality
             const searchInput = document.getElementById('search-input');
