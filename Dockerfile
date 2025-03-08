@@ -26,11 +26,12 @@ COPY frontend/ ./
 # Create dist directory and copy static assets
 RUN mkdir -p dist && cp -r public/* dist/
 
-# Use our simplified main file without Tailwind imports
-RUN cp src/main-simple.jsx src/main.jsx
+# Use our Bun-compatible version of main.jsx
+RUN cp src/main-bun.jsx src/main.jsx
 
-# Build frontend using Bun with proper output directory
-RUN bun build ./src/main.jsx --outdir=dist --minify
+# Build frontend using Bun with proper output directory and flags for compatibility
+RUN bun build ./src/main.jsx --outdir=dist --minify \
+    --external react --external react-dom --external react-router-dom
 
 FROM python:3.12-alpine
 
