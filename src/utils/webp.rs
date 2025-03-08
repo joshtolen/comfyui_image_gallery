@@ -223,50 +223,40 @@ pub async fn convert_webp_to_webm(
     tokio::spawn(async move {
         let progress_path_string3 = progress_path_string2.clone();
         let _result = tokio::task::spawn_blocking(move || {
-            // For this particular WebP, we need to try a different approach
-            let intermediate_gif = format!("{}/intermediate.gif", temp_dir_clone);
-            info!("Converting WebP to intermediate GIF format: {}", intermediate_gif);
+            // Use the Python script to convert animated WebP to WebM
+            info!("Using Python extractor script to convert WebP to WebM");
             
-            // First attempt - convert to GIF as an intermediate format
-            let gif_output = Command::new("convert")
-                .arg(&file_path_str_clone)
-                .arg(intermediate_gif.clone())
-                .output();
-                
-            let gif_created = match &gif_output {
-                Ok(output) => {
-                    let success = output.status.success();
-                    if !success {
-                        let error = String::from_utf8_lossy(&output.stderr);
-                        error!("Failed to convert WebP to GIF: {}", error);
-                    }
-                    success && Path::new(&intermediate_gif).exists()
-                },
-                Err(e) => {
-                    error!("Error creating GIF: {}", e);
-                    false
-                }
+            // First check if the Python script exists
+            let script_path = PathBuf::from("./WebP_Animated_Extractor.py");
+            let docker_script_path = PathBuf::from("/app/WebP_Animated_Extractor.py");
+            
+            let script_exists = script_path.exists() || docker_script_path.exists();
+            let script_to_use = if script_path.exists() {
+                script_path.to_string_lossy().to_string()
+            } else if docker_script_path.exists() {
+                docker_script_path.to_string_lossy().to_string()
+            } else {
+                "./WebP_Animated_Extractor.py".to_string() // Will likely fail
             };
             
-            let output = if gif_created {
-                info!("Successfully created intermediate GIF, converting to WebM");
+            let output = if script_exists {
+                // Extract the parent directory of the output path
+                let output_dir = Path::new(&webm_path_clone).parent()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|| ".".to_string());
                 
-                // Now convert the GIF to WebM
-                Command::new("ffmpeg")
-                    .arg("-i")
-                    .arg(&intermediate_gif)
-                    .arg("-c:v")
-                    .arg("libvpx")
-                    .arg("-b:v")
-                    .arg("1M")
-                    .arg("-y")
-                    .arg(&webm_path_clone)
+                // Run the Python script
+                info!("Running Python script: {} {} {}", script_to_use, file_path_str_clone, output_dir);
+                Command::new("python3")
+                    .arg(&script_to_use)
+                    .arg(&file_path_str_clone)
+                    .arg(&output_dir)
                     .output()
             } else {
-                // Second approach - use gif2webp directly (part of libwebp)
-                info!("GIF creation failed, trying gif2webp");
+                error!("WebP_Animated_Extractor.py script not found");
                 
-                // Create a new intermediate GIF using dwebp to extract first frame
+                // Fallback to static image extraction if script is missing
+                info!("Python script not found, trying to extract a static frame as fallback");
                 let static_webp = format!("{}/static.webp", temp_dir_clone);
                 let static_created = Command::new("dwebp")
                     .arg(&file_path_str_clone)
@@ -288,24 +278,14 @@ pub async fn convert_webp_to_webm(
                     // Copy the static WebP to the target path
                     if let Err(e) = fs::copy(&static_webp, &target_path) {
                         error!("Failed to copy static WebP: {}", e);
-                        
-                        // Return failure command result
                         Command::new("false").output()
                     } else {
                         info!("Using static WebP as fallback: {}", target_path.display());
-                        
-                        // Return a successful command result
                         Command::new("true").output()
                     }
                 } else {
-                    // Last resort - just try a simple FFmpeg command
-                    info!("All conversion methods failed, trying simple FFmpeg command");
-                    Command::new("ffmpeg")
-                        .arg("-i")
-                        .arg(&file_path_str_clone)
-                        .arg("-y")
-                        .arg(&webm_path_clone)
-                        .output()
+                    error!("Failed to extract static WebP frame");
+                    Command::new("false").output()
                 }
             };
             
@@ -446,7 +426,21 @@ pub async fn convert_webp_to_webm(
         let _ = fs::remove_file(&PathBuf::from(progress_path_string3));
     });
     
-    Ok(Some(webm_path))
+    // Return the path to the output file (which might not exist if conversion failed)
+    // Check if the file exists before returning
+    if webm_path.exists() {
+        Ok(Some(webm_path))
+    } else {
+        // Check if we have a failure marker
+        let failure_marker = PathBuf::from(format!("{}.conversion_failed", file_path_str));
+        if failure_marker.exists() {
+            // Conversion has already failed
+            Err(anyhow!("Conversion already failed for this file"))
+        } else {
+            // No marker yet, let the caller decide how to handle it
+            Ok(None)
+        }
+    }
 }
 
 /// Update the progress of WebP to WebM conversion

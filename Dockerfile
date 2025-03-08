@@ -44,11 +44,15 @@ FROM debian:bookworm-slim
 # Set the working directory
 WORKDIR /app
 
-# Install runtime dependencies (mainly ffmpeg)
+# Install runtime dependencies (ffmpeg, python, and webp tools)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \
+    python3 \
+    python3-pip \
+    webp \  
+    libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories for images and thumbnails
@@ -58,6 +62,10 @@ RUN mkdir -p /app/static/images/output /app/static/thumbnails /app/static/images
 COPY --from=builder /usr/src/comfyui_gallery/target/release/comfyui_image_gallery /app/
 COPY --from=builder /usr/src/comfyui_gallery/templates/ /app/templates/
 COPY --from=builder /usr/src/comfyui_gallery/static/ /app/static/
+
+# Copy the WebP conversion Python script
+COPY WebP_Animated_Extractor.py /app/
+RUN chmod +x /app/WebP_Animated_Extractor.py
 
 # Set proper permissions for the app directories
 RUN chmod -R 755 /app
