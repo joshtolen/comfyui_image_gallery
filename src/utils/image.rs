@@ -124,6 +124,11 @@ pub fn generate_thumbnail(
     thumbnail_dir: &str,
     _archive_dir: &str,
 ) -> Result<PathBuf> {
+    // Check if file exists before trying to generate thumbnail
+    if !file_path.exists() {
+        return Err(anyhow!("File does not exist: {}", file_path.display()));
+    }
+    
     let _filename = file_path.file_name().ok_or_else(|| anyhow!("Invalid file path"))?;
     let base_name = file_path.file_stem().ok_or_else(|| anyhow!("Invalid file path"))?;
     let thumbnail_filename = format!("{}_thumbnail.webp", base_name.to_string_lossy());

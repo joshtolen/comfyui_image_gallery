@@ -103,6 +103,11 @@ async fn index(
         let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
         let has_mp4 = mp4_path.exists();
         
+        // If WebP file doesn't exist on disk, don't include it in the gallery
+        if is_webp && !file_path.exists() {
+            continue;
+        }
+        
         // Determine source file (MP4 for animated WebP)
         let source = if is_webp && has_mp4 {
             format!("{}.mp4", filename)
@@ -280,77 +285,124 @@ fn get_filtered_files(
     
     // Filter and collect files
     let mut all_files = Vec::new();
+    info!("Scanning directory for files: {}", data.file_dir);
+    
     for entry in dir_entries.flatten() {
         if let Some(filename) = entry.file_name().to_str() {
+            info!("Found file: {}", filename);
+            
             // Skip files in archive
             if archive_files.contains(filename) {
+                info!("Skipping archived file: {}", filename);
                 continue;
             }
             
+            let lower_filename = filename.to_lowercase();
+            
             // Only include supported file types
-            if filename.to_lowercase().ends_with(".jpg") ||
-               filename.to_lowercase().ends_with(".jpeg") ||
-               filename.to_lowercase().ends_with(".png") ||
-               filename.to_lowercase().ends_with(".gif") ||
-               filename.to_lowercase().ends_with(".bmp") ||
-               filename.to_lowercase().ends_with(".webp") ||
-               filename.to_lowercase().ends_with(".mp4") ||
-               filename.to_lowercase().ends_with(".avi") ||
-               filename.to_lowercase().ends_with(".mov") ||
-               filename.to_lowercase().ends_with(".mkv") ||
-               filename.to_lowercase().ends_with(".webm") {
+            if lower_filename.ends_with(".jpg") ||
+               lower_filename.ends_with(".jpeg") ||
+               lower_filename.ends_with(".png") ||
+               lower_filename.ends_with(".gif") ||
+               lower_filename.ends_with(".bmp") ||
+               lower_filename.ends_with(".webp") ||
+               lower_filename.ends_with(".mp4") ||
+               lower_filename.ends_with(".avi") ||
+               lower_filename.ends_with(".mov") ||
+               lower_filename.ends_with(".mkv") ||
+               lower_filename.ends_with(".webm") {
+                
+                // Verify file exists on disk (particularly important for WebP files)
+                let file_path = Path::new(&data.file_dir).join(filename);
+                if !file_path.exists() {
+                    info!("File doesn't exist on disk, skipping: {}", filename);
+                    continue;
+                }
+                
+                info!("Adding supported file to gallery: {}", filename);
                 all_files.push(filename.to_string());
+            } else {
+                info!("Skipping unsupported file: {}", filename);
             }
         }
     }
     
+    info!("Found {} supported files in directory", all_files.len());
+    
     // Find which WebP files are animated
     let mut animated_webps = std::collections::HashSet::new();
-    for filename in &all_files {
-        if filename.to_lowercase().ends_with(".webp") {
-            let file_path = Path::new(&data.file_dir).join(filename);
-            let animated = webp::is_animated_webp(&file_path);
-            let mp4_exists = Path::new(&data.file_dir).join(format!("{}.mp4", filename)).exists();
+    // Only include WebP files that actually exist on disk
+    let webp_files: Vec<_> = all_files.iter()
+        .filter(|f| {
+            let file_path = Path::new(&data.file_dir).join(f);
+            f.to_lowercase().ends_with(".webp") && file_path.exists()
+        })
+        .collect();
+    
+    info!("Found {} WebP files to check for animation", webp_files.len());
+    
+    for filename in webp_files {
+        info!("Checking if WebP is animated: {}", filename);
+        let file_path = Path::new(&data.file_dir).join(filename);
+        
+        let animated = webp::is_animated_webp(&file_path);
+        let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
+        let mp4_exists = mp4_path.exists();
+        
+        info!("WebP file: {}, animated: {}, mp4 exists: {} at {}", 
+              filename, animated, mp4_exists, mp4_path.display());
+        
+        if animated || mp4_exists {
+            info!("Adding to animated WebPs list: {}", filename);
+            animated_webps.insert(filename.clone());
             
-            if animated || mp4_exists {
-                animated_webps.insert(filename.clone());
-                
-                // Queue conversion for animated WebPs if MP4 doesn't exist
-                if animated && !mp4_exists {
-                    if let Ok(mut queue) = data.thumbnail_queue.lock() {
-                        if !queue.contains(filename) {
-                            queue.push(filename.clone());
-                        }
+            // Queue conversion for animated WebPs if MP4 doesn't exist
+            if animated && !mp4_exists {
+                info!("Queueing WebP for MP4 conversion: {}", filename);
+                if let Ok(mut queue) = data.thumbnail_queue.lock() {
+                    if !queue.contains(filename) {
+                        queue.push(filename.clone());
+                        info!("Added to conversion queue: {}", filename);
                     } else {
-                        error!("Failed to lock thumbnail queue");
+                        info!("Already in conversion queue: {}", filename);
                     }
+                } else {
+                    error!("Failed to lock thumbnail queue");
                 }
             }
+        } else {
+            info!("WebP is not animated: {}", filename);
         }
     }
+    
+    info!("Found {} animated WebP files", animated_webps.len());
     
     // Filter based on file type
     let filtered_files = match file_type {
         "images" => all_files.into_iter()
             .filter(|f| {
+                let path = Path::new(&data.file_dir).join(f);
                 (f.to_lowercase().ends_with(".jpg") ||
                  f.to_lowercase().ends_with(".jpeg") ||
                  f.to_lowercase().ends_with(".png") ||
                  f.to_lowercase().ends_with(".gif") ||
                  f.to_lowercase().ends_with(".bmp") ||
                  (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(f))) &&
-                !f.to_lowercase().ends_with(".webp.mp4")
+                !f.to_lowercase().ends_with(".webp.mp4") &&
+                path.exists() // Make sure file exists
             })
             .collect(),
         "videos" => all_files.into_iter()
             .filter(|f| {
-                f.to_lowercase().ends_with(".mp4") ||
+                let path = Path::new(&data.file_dir).join(f);
+                (f.to_lowercase().ends_with(".mp4") ||
                 f.to_lowercase().ends_with(".avi") ||
                 f.to_lowercase().ends_with(".mov") ||
                 f.to_lowercase().ends_with(".mkv") ||
                 f.to_lowercase().ends_with(".webm") ||
                 f.to_lowercase().ends_with(".webp.mp4") ||
-                animated_webps.contains(f)
+                animated_webps.contains(f)) &&
+                path.exists() // Make sure file exists
             })
             .collect(),
         "favorites" => {
@@ -363,7 +415,10 @@ fn get_filtered_files(
             };
             
             all_files.into_iter()
-                .filter(|f| favorites_guard.contains_key(f))
+                .filter(|f| {
+                    let path = Path::new(&data.file_dir).join(f);
+                    favorites_guard.contains_key(f) && path.exists()
+                })
                 .collect()
         },
         _ => all_files,

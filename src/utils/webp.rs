@@ -17,6 +17,12 @@ use crate::utils::file;
 
 /// Check if a WebP file is animated
 pub fn is_animated_webp(file_path: &Path) -> bool {
+    // Check if file exists before trying to process it
+    if !file_path.exists() {
+        log::warn!("WebP file doesn't exist: {}", file_path.display());
+        return false;
+    }
+    
     if !file_path.extension().map_or(false, |ext| ext.eq_ignore_ascii_case("webp")) {
         return false;
     }
@@ -32,16 +38,28 @@ pub fn is_animated_webp(file_path: &Path) -> bool {
                             // This requires doing a bit of binary parsing
                             match check_webp_animation_frames(file_path) {
                                 Ok(frame_count) => frame_count > 1,
-                                Err(_) => false
+                                Err(e) => {
+                                    log::warn!("Error checking WebP animation frames for {}: {}", file_path.display(), e);
+                                    false
+                                }
                             }
                         },
-                        Err(_) => false
+                        Err(e) => {
+                            log::warn!("Error decoding WebP {}: {}", file_path.display(), e);
+                            false
+                        }
                     }
                 },
-                Err(_) => false
+                Err(e) => {
+                    log::warn!("Error guessing format for {}: {}", file_path.display(), e);
+                    false
+                }
             }
         },
-        Err(_) => false
+        Err(e) => {
+            log::warn!("Error opening WebP file {}: {}", file_path.display(), e);
+            false
+        }
     }
 }
 
@@ -54,6 +72,7 @@ fn check_webp_animation_frames(file_path: &Path) -> Result<usize> {
     
     // Check if this is a WebP file
     if buffer.len() < 12 || &buffer[0..4] != b"RIFF" || &buffer[8..12] != b"WEBP" {
+        log::warn!("File is not a valid WebP: {}", file_path.display());
         return Ok(1); // Not a WebP or invalid format, assume 1 frame
     }
     
