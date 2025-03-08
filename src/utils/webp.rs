@@ -222,27 +222,76 @@ pub async fn convert_webp_to_webm(
     tokio::spawn(async move {
         let progress_path_string3 = progress_path_string2.clone();
         let _result = tokio::task::spawn_blocking(move || {
-            // Use ffmpeg to convert to WebM with optimized settings for animated content
-            let output = Command::new("ffmpeg")
-                .arg("-analyzeduration")
-                .arg("10000000")  // Increase analyze duration
-                .arg("-probesize") 
-                .arg("10000000")  // Increase probe size
+            // First try to extract frames to a temporary directory
+            let temp_frames_dir = format!("{}/frames", temp_dir_clone);
+            let _ = fs::create_dir_all(&temp_frames_dir);
+            
+            info!("Extracting frames from WebP to {}", temp_frames_dir);
+            
+            // Extract frames using libwebp directly (more reliable for animated WebP)
+            let extract_output = Command::new("ffmpeg")
                 .arg("-i")
                 .arg(&file_path_str_clone)
-                .arg("-c:v")
-                .arg("libvpx-vp9")  // Use VP9 codec
-                .arg("-b:v")
-                .arg("1M")          // Bitrate
-                .arg("-pix_fmt")
-                .arg("yuva420p")    // Support alpha channel
-                .arg("-auto-alt-ref") 
-                .arg("0")           // Disable alternative reference frames for animation
-                .arg("-crf")
-                .arg("30")          // Quality level
-                .arg("-y")
-                .arg(&webm_path_clone)
+                .arg("-vsync")
+                .arg("0")              // Preserve frame timestamps
+                .arg("-f")
+                .arg("image2")         // Force image output
+                .arg(format!("{}/frame_%04d.png", temp_frames_dir))
                 .output();
+                
+            let frames_extracted = match &extract_output {
+                Ok(output) => {
+                    let success = output.status.success();
+                    if !success {
+                        let error = String::from_utf8_lossy(&output.stderr);
+                        error!("Failed to extract frames: {}", error);
+                    }
+                    success
+                },
+                Err(e) => {
+                    error!("Error extracting frames: {}", e);
+                    false
+                }
+            };
+            
+            let output = if frames_extracted {
+                // Count extracted frames
+                let entries = match fs::read_dir(&temp_frames_dir) {
+                    Ok(entries) => entries.count(),
+                    Err(_) => 0
+                };
+                
+                info!("Extracted {} frames, generating WebM from frames", entries);
+                
+                // Create WebM from extracted frames
+                Command::new("ffmpeg")
+                    .arg("-framerate")
+                    .arg("10")               // Decent framerate for animation
+                    .arg("-i")
+                    .arg(format!("{}/frame_%04d.png", temp_frames_dir))
+                    .arg("-c:v")
+                    .arg("libvpx")           // Use regular VP8 for better compatibility
+                    .arg("-b:v")
+                    .arg("1M")               // Bitrate
+                    .arg("-auto-alt-ref")
+                    .arg("0")                // Better for animations
+                    .arg("-y")
+                    .arg(&webm_path_clone)
+                    .output()
+            } else {
+                // Fallback to direct conversion with more basic settings
+                info!("Frame extraction failed, trying direct WebM conversion");
+                Command::new("ffmpeg")
+                    .arg("-i")
+                    .arg(&file_path_str_clone)
+                    .arg("-c:v")
+                    .arg("libvpx")           // Use VP8 instead of VP9 for better compat
+                    .arg("-b:v")
+                    .arg("1M")               // Bitrate
+                    .arg("-y")
+                    .arg(&webm_path_clone)
+                    .output()
+            };
             
             match output {
                 Ok(output) => {

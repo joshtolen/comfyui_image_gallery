@@ -217,19 +217,19 @@ async fn check_file_status(
     let filename = path.into_inner();
     let original_path = Path::new(&data.file_dir).join(&filename);
     let archive_path = Path::new(&data.archive_dir).join(&filename);
-    let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
+    let webm_path = Path::new(&data.file_dir).join(format!("{}.webm", filename));
     
     let status = FileStatus {
         filename: filename.clone(),
         exists_in_original: original_path.exists(),
         exists_in_archive: archive_path.exists(),
-        exists_as_mp4: mp4_path.exists(),
+        exists_as_mp4: webm_path.exists(), // Field name still mp4 for backward compatibility
     };
     
     HttpResponse::Ok().json(status)
 }
 
-/// Get WebP to MP4 conversion progress
+/// Get WebP to WebM conversion progress
 #[get("/conversion-progress/{filename:.*}")]
 async fn conversion_progress(
     data: web::Data<AppState>,
@@ -256,14 +256,14 @@ async fn conversion_progress(
         }
     }
     
-    // Check if MP4 already exists or WebP is in archive
-    let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
+    // Check if WebM already exists or WebP is in archive
+    let webm_path = Path::new(&data.file_dir).join(format!("{}.webm", filename));
     let archive_path = Path::new(&data.archive_dir).join(&filename);
     
-    info!("No progress file, checking if MP4 exists: {}", mp4_path.display());
+    info!("No progress file, checking if WebM exists: {}", webm_path.display());
     info!("Checking if file is in archive: {}", archive_path.display());
     
-    if mp4_path.exists() || archive_path.exists() {
+    if webm_path.exists() || archive_path.exists() {
         return HttpResponse::Ok().json(serde_json::json!({
             "status": "completed",
             "progress": 100,

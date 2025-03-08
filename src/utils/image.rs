@@ -3,13 +3,43 @@ use std::fs;
 use std::io::Cursor;
 use std::process::Command;
 use anyhow::{Result, anyhow};
-use image::{GenericImageView, DynamicImage, ImageFormat, ImageBuffer, Rgba};
+use image::{GenericImageView, DynamicImage, ImageFormat, ImageBuffer, Rgba, RgbaImage};
 use image::imageops::{resize, FilterType};
 use log::{info, error, warn};
 
 use crate::utils::webp;
 
 const THUMBNAIL_SIZE: u32 = 200;
+
+/// Create a basic colored placeholder thumbnail when no placeholder image is available
+fn create_basic_placeholder_thumbnail(thumbnail_path: &Path) -> Result<()> {
+    // Create a new RGBA image with blue color and a play icon
+    let mut img = RgbaImage::new(THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+    
+    // Fill with dark blue background
+    for pixel in img.pixels_mut() {
+        *pixel = Rgba([41, 98, 255, 255]);
+    }
+    
+    // Draw a basic play triangle in white (simplified)
+    let center_x = THUMBNAIL_SIZE / 2;
+    let center_y = THUMBNAIL_SIZE / 2;
+    let icon_size = THUMBNAIL_SIZE / 3;
+    
+    for y in center_y - icon_size / 2..center_y + icon_size / 2 {
+        for x in center_x - icon_size / 2..center_x + icon_size / 2 {
+            // Simple triangle shape
+            if x >= center_x && (y - center_y).abs() < (x - center_x) {
+                img.put_pixel(x, y, Rgba([255, 255, 255, 255]));
+            }
+        }
+    }
+    
+    // Save as WebP with good quality
+    img.save_with_format(thumbnail_path, ImageFormat::WebP)?;
+    
+    Ok(())
+}
 
 /// Generate a thumbnail for an image file
 pub fn generate_image_thumbnail(
@@ -86,12 +116,19 @@ pub fn generate_video_thumbnail(
                 error!("Failed to execute FFmpeg: {}", e);
                 // Create a placeholder thumbnail instead of failing
                 let placeholder = Path::new("/app/static/video_placeholder.png");
+                let fallback_placeholder = Path::new("./static/video_placeholder.png");
+                
                 if placeholder.exists() {
-                    info!("Using video placeholder thumbnail");
+                    info!("Using video placeholder thumbnail from /app path");
                     return generate_image_thumbnail(placeholder, thumbnail_path);
+                } else if fallback_placeholder.exists() {
+                    info!("Using video placeholder thumbnail from local path");
+                    return generate_image_thumbnail(fallback_placeholder, thumbnail_path);
+                } else {
+                    // Create a basic colored placeholder if the image doesn't exist
+                    info!("Creating basic colored placeholder thumbnail");
+                    return create_basic_placeholder_thumbnail(thumbnail_path);
                 }
-                // Return error if no placeholder
-                return Err(anyhow!("Failed to execute FFmpeg: {}", e));
             }
         };
     
@@ -100,11 +137,19 @@ pub fn generate_video_thumbnail(
         error!("FFmpeg error: {}", error);
         // Create a placeholder thumbnail instead of failing
         let placeholder = Path::new("/app/static/video_placeholder.png");
+        let fallback_placeholder = Path::new("./static/video_placeholder.png");
+        
         if placeholder.exists() {
-            info!("Using video placeholder thumbnail");
+            info!("Using video placeholder thumbnail from /app path");
             return generate_image_thumbnail(placeholder, thumbnail_path);
+        } else if fallback_placeholder.exists() {
+            info!("Using video placeholder thumbnail from local path");
+            return generate_image_thumbnail(fallback_placeholder, thumbnail_path);
+        } else {
+            // Create a basic colored placeholder if the image doesn't exist
+            info!("Creating basic colored placeholder thumbnail");
+            return create_basic_placeholder_thumbnail(thumbnail_path);
         }
-        return Err(anyhow!("Failed to extract frame from video: {}", error));
     }
     
     // Create thumbnail from the extracted frame
