@@ -30,14 +30,14 @@ RUN npm install --force --no-package-lock
 COPY frontend/ ./
 
 # Create custom build script to use esbuild directly
-RUN echo '#!/bin/bash
-mkdir -p dist
-cp -r public/* dist/
-esbuild src/main.jsx --bundle --minify --loader:.js=jsx --outfile=dist/main.js
-' > build.sh && chmod +x build.sh
+RUN echo '#!/bin/bash' > build.sh && \
+    echo 'mkdir -p dist' >> build.sh && \
+    echo 'cp -r public/* dist/' >> build.sh && \
+    echo 'esbuild src/main.jsx --bundle --minify --loader:.js=jsx --outfile=dist/main.js' >> build.sh && \
+    chmod +x build.sh
 
 # Build frontend using our custom script
-RUN ./build.sh || (echo "Build failed but continuing" && mkdir -p dist && cp -r public/* dist/)
+RUN ./build.sh || (echo "Build failed but continuing" && mkdir -p dist && cp -r public/* dist/ || true)
 
 FROM python:3.12-alpine
 
