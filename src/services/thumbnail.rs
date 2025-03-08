@@ -31,8 +31,27 @@ pub async fn process_thumbnail_queue(
     // Release the lock
     drop(is_processing_guard);
     
+    // Check if there are items in the queue
+    let queue_empty = {
+        let queue = match thumbnail_queue.lock() {
+            Ok(queue) => queue,
+            Err(_) => return Err(anyhow!("Failed to lock thumbnail queue"))
+        };
+        queue.is_empty()
+    };
+    
+    if queue_empty {
+        // No items to process
+        info!("No items in thumbnail queue, skipping processing");
+        return Ok(());
+    }
+    
+    info!("Starting thumbnail processor with queue");
+    
     // Process the queue in a separate task
     tokio::spawn(async move {
+        let mut processed_count = 0;
+        
         loop {
             // Get a file from the queue
             let file = {
@@ -44,12 +63,18 @@ pub async fn process_thumbnail_queue(
                     }
                 };
                 
-                if queue.is_empty() {
+                let queue_size = queue.len();
+                
+                if queue_size == 0 {
+                    info!("Thumbnail queue is empty, processing complete");
                     break;
                 }
                 
+                info!("Processing file {}/{} from thumbnail queue", processed_count + 1, queue_size);
                 queue.remove(0)
             };
+            
+            processed_count += 1;
             
             debug!("Processing thumbnail for {}", file);
             
@@ -122,10 +147,21 @@ pub async fn start_thumbnail_processor(
     };
     
     if !is_processing_value {
-        // Start the processor
+        // Get the current queue contents
+        let queue_contents = {
+            let queue = thumbnail_queue.lock()
+                .map_err(|_| anyhow!("Failed to lock thumbnail queue"))?;
+            queue.clone()
+        };
+        
+        // Create new mutex with the queue contents
+        let new_queue = Arc::new(Mutex::new(queue_contents));
+        let new_processing = Arc::new(Mutex::new(false));
+        
+        // Start the processor with fresh mutex objects
         process_thumbnail_queue(
-            Arc::new(thumbnail_queue.clone()), 
-            Arc::new(is_processing.clone()),
+            new_queue,
+            new_processing,
             file_dir.to_string(),
             thumbnail_dir.to_string(),
             archive_dir.to_string(),
