@@ -195,6 +195,7 @@ async fn index(
     context.insert("video_count", &video_count);
     context.insert("favorite_count", &favorite_count);
     context.insert("total_count", &all_files.len());
+    context.insert("thumbnail_exists", &true); // Add missing variable
     
     let rendered = match data.template_engine.render("index.html", &context) {
         Ok(r) => r,
