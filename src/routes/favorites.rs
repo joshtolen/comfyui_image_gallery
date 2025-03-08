@@ -62,17 +62,17 @@ async fn toggle_favorite(
     // Update favorites
     match favorites::toggle_favorite(filename, req.is_favorite, &data.favorites, &data.favorites_file) {
         Ok(is_favorite) => {
-            HttpResponse::Ok().json(serde_json::json!({
+            return HttpResponse::Ok().json(serde_json::json!({
                 "success": true,
                 "file": filename,
                 "is_favorite": is_favorite
-            }))
+            }));
         },
         Err(e) => {
             error!("Error toggling favorite status: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
+            return HttpResponse::InternalServerError().json(serde_json::json!({
                 "error": format!("Failed to update favorite status: {}", e)
-            }))
+            }));
         }
     }
 }

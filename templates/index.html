@@ -950,6 +950,22 @@
                             file: filename,
                             is_favorite: !isFavorite
                         })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Favorite toggle response:', data);
+                        // Verify server state matches UI state
+                        if (data.success && data.is_favorite !== !isFavorite) {
+                            console.warn('Server favorite state mismatch, updating UI');
+                            this.innerHTML = data.is_favorite ? '⭐' : '☆';
+                            this.setAttribute('data-favorite', data.is_favorite.toString());
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error toggling favorite:', error);
+                        // Revert UI on error
+                        this.innerHTML = isFavorite ? '⭐' : '☆';
+                        this.setAttribute('data-favorite', isFavorite.toString());
                     });
                 });
             });
