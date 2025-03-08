@@ -146,7 +146,7 @@
                   {% elif file_type == 'favorites' and theme != 'dark' %}bg-primary-light text-white font-bold
                   {% elif theme == 'dark' %}bg-card-dark text-white
                   {% else %}bg-card-light text-gray-800 shadow-sm{% endif %}">
-            Favorites⭐ ({{ favorite_count|default(0) }})
+            Favorites⭐ ({{ favorite_count | default(value=0) }})
         </a>
     </div>
 
