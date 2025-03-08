@@ -3,91 +3,498 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComfyUI Image Gallery (Simplified)</title>
+    <title>ComfyUI Image Gallery</title>
     
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #a29bfe;
+            --accent-color: #00cec9;
+            --light-bg: #f5f5f5;
+            --dark-bg: #222222;
+            --light-card: #ffffff;
+            --dark-card: #2d2d2d;
+            --light-text: #333333;
+            --dark-text: #f5f5f5;
+            --border-light: rgba(0,0,0,0.1);
+            --border-dark: rgba(255,255,255,0.1);
         }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        body.light {
+            background-color: var(--light-bg);
+            color: var(--light-text);
+        }
+        
+        body.dark {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+        
         .header {
+            padding: 20px;
             text-align: center;
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: 30px;
+        }
+        
+        body.dark .header {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .logo {
+            max-width: 300px;
+            height: auto;
             margin-bottom: 20px;
         }
+        
+        .filter-tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+        
+        .filter-tab {
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .filter-tab:hover {
+            transform: translateY(-2px);
+        }
+        
+        .filter-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+        
+        body.light .filter-tab:not(.active) {
+            background-color: var(--light-card);
+            color: var(--light-text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        body.dark .filter-tab:not(.active) {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+        
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 0 20px;
+            max-width: 1800px;
+            margin: 0 auto;
         }
+        
         .card {
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 8px;
             overflow: hidden;
-            background: white;
+            transition: all 0.3s;
+            position: relative;
+            aspect-ratio: 1 / 1;
         }
+        
+        body.light .card {
+            background-color: var(--light-card);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        body.dark .card {
+            background-color: var(--dark-card);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+        
         .thumbnail {
             width: 100%;
-            height: 200px;
+            height: 100%;
             object-fit: cover;
+            transition: transform 0.5s;
         }
-        .info {
-            padding: 10px;
+        
+        .card:hover .thumbnail {
+            transform: scale(1.05);
         }
+        
+        .filename {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover .filename {
+            transform: translateY(0);
+        }
+        
+        .video-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: white;
+            text-shadow: 0 0 10px rgba(0,0,0,0.7);
+            opacity: 0.8;
+        }
+        
+        .actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .card:hover .action-btn {
+            opacity: 0.8;
+            transform: translateX(0);
+        }
+        
+        .action-btn:hover {
+            opacity: 1;
+            background: rgba(0,0,0,0.8);
+        }
+        
         .pagination {
-            margin-top: 20px;
-            text-align: center;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-        .pagination a {
-            display: inline-block;
-            padding: 5px 10px;
-            margin: 0 5px;
-            border: 1px solid #ddd;
+        
+        .page-link {
+            padding: 8px 15px;
+            border-radius: 5px;
             text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .page-link:hover {
+            transform: translateY(-2px);
+        }
+        
+        .page-link.current {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+        
+        body.light .page-link:not(.current) {
+            background-color: var(--light-card);
+            color: var(--light-text);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        body.dark .page-link:not(.current) {
+            background-color: var(--dark-card);
+            color: var(--dark-text);
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border: none;
+            z-index: 100;
+        }
+        
+        /* Animation for loading */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px solid rgba(0,0,0,0.1);
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+        
+        body.dark .spinner {
+            border-color: rgba(255,255,255,0.1);
+            border-top-color: var(--primary-color);
+        }
+        
+        .loading-text {
+            margin-top: 15px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-light);
+            font-size: 14px;
+        }
+        
+        body.dark footer {
+            border-top-color: var(--border-dark);
         }
     </style>
 </head>
-<body>
+<body class="{% if theme == 'dark' %}dark{% else %}light{% endif %}">
     <div class="header">
-        <h1>ComfyUI Image Gallery</h1>
-        <p>Theme: {{ theme }} | Page: {{ page }} | File Type: {{ file_type }}</p>
-        <div>
-            <a href="?type=all">All ({{ total_count }})</a> |
-            <a href="?type=images">Images ({{ image_count }})</a> |
-            <a href="?type=videos">Videos ({{ video_count }})</a> |
-            <a href="?type=favorites">Favorites ({{ favorite_count | default(value=0) }})</a>
+        <img src="/static/logo.png" alt="ComfyUI Logo" class="logo">
+        
+        <div class="filter-tabs">
+            <a href="?type=all" class="filter-tab {% if file_type == 'all' %}active{% endif %}">
+                All ({{ total_count }})
+            </a>
+            <a href="?type=images" class="filter-tab {% if file_type == 'images' %}active{% endif %}">
+                Images ({{ image_count }})
+            </a>
+            <a href="?type=videos" class="filter-tab {% if file_type == 'videos' %}active{% endif %}">
+                Videos ({{ video_count }})
+            </a>
+            <a href="?type=favorites" class="filter-tab {% if file_type == 'favorites' %}active{% endif %}">
+                Favorites ⭐ ({{ favorite_count | default(value=0) }})
+            </a>
         </div>
     </div>
 
-    <!-- Simple gallery grid -->
-    <div class="gallery">
+    <!-- Loading indicator -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p class="loading-text">Loading gallery...</p>
+    </div>
+
+    <!-- Gallery grid -->
+    <div id="gallery" class="gallery" style="display: none;">
         {% for image in images %}
             <div class="card">
-                <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
-                <div class="info">
-                    <p>{{ image.filename }}</p>
-                    <p>Size: {{ image.size }}</p>
-                    <p>Type: {% if image.is_video %}Video{% else %}Image{% endif %}</p>
+                {% if image.is_video %}
+                    <a href="#" class="video-link" data-source="/static/images/output/{{ image.source }}">
+                        <div class="video-indicator">▶️</div>
+                        <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
+                    </a>
+                {% else %}
+                    <a href="/static/images/output/{{ image.source }}" class="image-link">
+                        <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
+                    </a>
+                {% endif %}
+                
+                <div class="filename">{{ image.filename | truncate(length=30) }}</div>
+                
+                <div class="actions">
+                    <div class="action-btn favorite-btn" data-filename="{{ image.filename }}" data-favorite="{{ image.is_favorite | default(value=false) }}">
+                        {% if image.is_favorite %}⭐{% else %}☆{% endif %}
+                    </div>
+                    <div class="action-btn info-btn" data-filename="{{ image.filename }}" data-size="{{ image.size }}" data-type="{{ image.file_type }}">
+                        ℹ️
+                    </div>
+                    <div class="action-btn download-btn" data-url="/static/images/output/{{ image.source }}">
+                        ⬇️
+                    </div>
+                    <div class="action-btn delete-btn" data-filename="{{ image.filename }}">
+                        🗑️
+                    </div>
                 </div>
             </div>
         {% endfor %}
     </div>
     
-    <!-- Simple pagination -->
+    <!-- Pagination -->
     <div class="pagination">
         {% if page > 1 %}
-            <a href="?type={{ file_type }}&page={{ page - 1 }}">Previous</a>
+            <a href="?type={{ file_type }}&page=1" class="page-link">First</a>
+            <a href="?type={{ file_type }}&page={{ page - 1 }}" class="page-link">Previous</a>
         {% endif %}
         
-        {% for p in range(start=1, end=5) %}
-            <a href="?type={{ file_type }}&page={{ p }}">{{ p }}</a>
+        {% set start_page = page-2 %}
+        {% if start_page < 1 %}{% set start_page = 1 %}{% endif %}
+        {% set end_page = page+3 %}
+        {% if end_page > total_pages+1 %}{% set end_page = total_pages+1 %}{% endif %}
+        
+        {% for p in range(start=start_page, end=end_page) %}
+            <a href="?type={{ file_type }}&page={{ p }}" class="page-link {% if p == page %}current{% endif %}">{{ p }}</a>
         {% endfor %}
         
         {% if page < total_pages %}
-            <a href="?type={{ file_type }}&page={{ page + 1 }}">Next</a>
+            <a href="?type={{ file_type }}&page={{ page + 1 }}" class="page-link">Next</a>
+            <a href="?type={{ file_type }}&page={{ total_pages }}" class="page-link">Last</a>
         {% endif %}
     </div>
+    
+    <!-- Theme toggle button -->
+    <button id="theme-toggle" class="theme-toggle">
+        {% if theme == 'dark' %}☀️{% else %}🌙{% endif %}
+    </button>
+    
+    <footer>
+        <p>ComfyUI Gallery v2.0 | All images are copyrighted © 2023-2025</p>
+    </footer>
+    
+    <!-- Basic JavaScript -->
+    <script>
+        // Show gallery when images are loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show gallery and hide loading after a short delay
+            setTimeout(function() {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('gallery').style.display = 'grid';
+            }, 500);
+            
+            // Theme toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    // Send AJAX request to toggle theme
+                    fetch('/toggle-theme', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update body class
+                        document.body.classList.remove('dark', 'light');
+                        document.body.classList.add(data.theme);
+                        
+                        // Update toggle button text
+                        themeToggle.innerHTML = data.theme === 'dark' ? '☀️' : '🌙';
+                        
+                        // Reload page to apply theme fully
+                        window.location.reload();
+                    });
+                });
+            }
+            
+            // Favorite buttons
+            document.querySelectorAll('.favorite-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const filename = this.getAttribute('data-filename');
+                    const isFavorite = this.getAttribute('data-favorite') === 'true';
+                    
+                    // Toggle favorite status
+                    this.innerHTML = isFavorite ? '☆' : '⭐';
+                    this.setAttribute('data-favorite', isFavorite ? 'false' : 'true');
+                    
+                    // Send AJAX request
+                    fetch('/toggle-favorite', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            file: filename,
+                            is_favorite: !isFavorite
+                        })
+                    });
+                });
+            });
+            
+            // Delete buttons
+            document.querySelectorAll('.delete-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const filename = this.getAttribute('data-filename');
+                    
+                    if (confirm('Are you sure you want to delete this file?')) {
+                        fetch('/delete-file', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                file: filename
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Remove the card from the gallery
+                                this.closest('.card').remove();
+                            } else {
+                                alert('Error: ' + data.message);
+                            }
+                        });
+                    }
+                });
+            });
+            
+            // Video links
+            document.querySelectorAll('.video-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const videoUrl = this.getAttribute('data-source');
+                    window.open(videoUrl, '_blank');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
