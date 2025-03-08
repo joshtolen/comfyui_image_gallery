@@ -12,7 +12,7 @@ use crate::utils::webp;
 const THUMBNAIL_SIZE: u32 = 200;
 
 /// Create a basic colored placeholder thumbnail when no placeholder image is available
-fn create_basic_placeholder_thumbnail(thumbnail_path: &Path) -> Result<()> {
+pub fn create_basic_placeholder_thumbnail(thumbnail_path: &Path) -> Result<()> {
     // Create a new RGBA image with blue color and a play icon
     let mut img = RgbaImage::new(THUMBNAIL_SIZE, THUMBNAIL_SIZE);
     
@@ -116,42 +116,18 @@ pub fn generate_video_thumbnail(
             Ok(output) => output,
             Err(e) => {
                 error!("Failed to execute FFmpeg: {}", e);
-                // Create a placeholder thumbnail instead of failing
-                let placeholder = Path::new("/app/static/video_placeholder.png");
-                let fallback_placeholder = Path::new("./static/video_placeholder.png");
-                
-                if placeholder.exists() {
-                    info!("Using video placeholder thumbnail from /app path");
-                    return generate_image_thumbnail(placeholder, thumbnail_path);
-                } else if fallback_placeholder.exists() {
-                    info!("Using video placeholder thumbnail from local path");
-                    return generate_image_thumbnail(fallback_placeholder, thumbnail_path);
-                } else {
-                    // Create a basic colored placeholder if the image doesn't exist
-                    info!("Creating basic colored placeholder thumbnail");
-                    return create_basic_placeholder_thumbnail(thumbnail_path);
-                }
+                // Create a basic colored placeholder instead of failing
+                info!("FFmpeg failed, creating basic colored placeholder thumbnail");
+                return create_basic_placeholder_thumbnail(thumbnail_path);
             }
         };
     
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
         error!("FFmpeg error: {}", error);
-        // Create a placeholder thumbnail instead of failing
-        let placeholder = Path::new("/app/static/video_placeholder.png");
-        let fallback_placeholder = Path::new("./static/video_placeholder.png");
-        
-        if placeholder.exists() {
-            info!("Using video placeholder thumbnail from /app path");
-            return generate_image_thumbnail(placeholder, thumbnail_path);
-        } else if fallback_placeholder.exists() {
-            info!("Using video placeholder thumbnail from local path");
-            return generate_image_thumbnail(fallback_placeholder, thumbnail_path);
-        } else {
-            // Create a basic colored placeholder if the image doesn't exist
-            info!("Creating basic colored placeholder thumbnail");
-            return create_basic_placeholder_thumbnail(thumbnail_path);
-        }
+        // Create a basic colored placeholder instead of failing
+        info!("FFmpeg error, creating basic colored placeholder thumbnail");
+        return create_basic_placeholder_thumbnail(thumbnail_path);
     }
     
     // Create thumbnail from the extracted frame

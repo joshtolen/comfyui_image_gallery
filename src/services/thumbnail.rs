@@ -88,7 +88,23 @@ pub async fn process_thumbnail_queue(
             // Generate thumbnail
             match image::generate_thumbnail(&file_path, &thumbnail_dir, &archive_dir) {
                 Ok(_) => info!("Generated thumbnail for {}", file),
-                Err(e) => error!("Failed to generate thumbnail for {}: {}", file, e),
+                Err(e) => {
+                    error!("Failed to generate thumbnail for {}: {}", file, e);
+                    
+                    // In case of failure, create a basic color placeholder
+                    let base_name = file_path.file_stem().unwrap_or_default();
+                    let thumbnail_path = Path::new(&thumbnail_dir)
+                        .join(format!("{}_thumbnail.webp", base_name.to_string_lossy()));
+                    
+                    // Only try to create placeholder if the error wasn't that the file doesn't exist
+                    if file_path.exists() {
+                        if let Err(e2) = image::create_basic_placeholder_thumbnail(&thumbnail_path) {
+                            error!("Failed to create placeholder thumbnail: {}", e2);
+                        } else {
+                            info!("Created basic placeholder thumbnail for {}", file);
+                        }
+                    }
+                }
             }
             
             // Check if WebP needs to be converted to MP4

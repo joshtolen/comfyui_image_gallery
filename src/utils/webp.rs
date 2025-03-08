@@ -274,10 +274,19 @@ pub async fn convert_webp_to_webm(
                     .arg(&static_webp)
                     .output();
                 
-                if static_created.is_ok() && Path::new(&static_webp).exists() {
+                let static_success = static_created.is_ok() && Path::new(&static_webp).exists();
+                if static_success {
                     info!("Created static WebP, using as fallback");
+                    // If webm_path_clone ends with .webm, we need a new path ending with .webp
+                    let target_path = if webm_path_clone.to_string_lossy().ends_with(".webm") {
+                        let new_path = webm_path_clone.to_string_lossy().replace(".webm", ".webp");
+                        PathBuf::from(new_path)
+                    } else {
+                        webm_path_clone.clone()
+                    };
+                    
                     // Copy the static WebP to the target path
-                    if let Err(e) = fs::copy(&static_webp, &webm_path_clone) {
+                    if let Err(e) = fs::copy(&static_webp, &target_path) {
                         error!("Failed to copy static WebP: {}", e);
                     }
                     
