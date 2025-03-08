@@ -1,4 +1,4 @@
-FROM node:20-alpine AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 # Set the working directory for the frontend
 WORKDIR /app/frontend
