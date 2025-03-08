@@ -107,43 +107,13 @@ pub async fn process_thumbnail_queue(
                 }
             }
             
-            // Check if WebP needs to be converted to MP4
+            // No longer do WebP to WebM conversion
             let extension = file_path.extension()
                 .map(|e| e.to_string_lossy().to_lowercase())
                 .unwrap_or_default();
             
             if extension == "webp" && webp::is_animated_webp(&file_path) {
-                // Check if conversion has already failed
-                let failure_marker = format!("{}.conversion_failed", file_path.to_string_lossy());
-                if Path::new(&failure_marker).exists() {
-                    info!("Skipping previously failed conversion for: {}", file);
-                } else {
-                    // Start WebP to WebM conversion
-                    match webp::convert_webp_to_webm(&file_path, &archive_dir, &thumbnail_dir).await {
-                        Ok(Some(output_path)) => {
-                            if output_path.exists() {
-                                // Check if it's a WebM or a WebP (for fallback static images)
-                                let extension = output_path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                                if extension.eq_ignore_ascii_case("webm") {
-                                    info!("Successfully converted WebP to WebM: {}", file);
-                                } else if extension.eq_ignore_ascii_case("webp") {
-                                    info!("Created static WebP fallback (animation conversion failed): {}", file);
-                                } else {
-                                    info!("Created conversion output: {} as {}", file, output_path.display());
-                                }
-                            } else {
-                                error!("Output file not created despite successful conversion: {}", file);
-                                // Create a failure marker since the file doesn't exist
-                                let failure_marker = format!("{}.conversion_failed", file_path.to_string_lossy());
-                                if let Err(e) = std::fs::write(&failure_marker, "File not created after conversion") {
-                                    error!("Failed to create failure marker: {}", e);
-                                }
-                            }
-                        },
-                        Ok(None) => info!("WebP is not animated, no conversion needed: {}", file),
-                        Err(e) => error!("Failed to convert WebP to WebM: {}: {}", file, e),
-                    }
-                }
+                info!("Animated WebP detected: {}", file);
             }
             
             // Small delay to avoid CPU overload

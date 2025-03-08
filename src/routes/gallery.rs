@@ -98,31 +98,19 @@ async fn index(
                        filename.to_lowercase().ends_with(".mkv") || 
                        filename.to_lowercase().ends_with(".webm");
         
-        // Check if it's a WebP and has a WebM version
+        // Check if it's a WebP
         let is_webp = filename.to_lowercase().ends_with(".webp");
-        let webm_path = Path::new(&data.file_dir).join(format!("{}.webm", filename));
-        let has_webm = webm_path.exists();
         
         // If WebP file doesn't exist on disk, don't include it in the gallery
         if is_webp && !file_path.exists() {
             continue;
         }
         
-        // Check for MP4 for backward compatibility
-        let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
-        let has_mp4 = mp4_path.exists();
+        // Always use the original file as source
+        let source = filename.clone();
         
-        // Determine source file (WebM or MP4 for animated WebP, with MP4 for backward compatibility)
-        let source = if is_webp && has_webm {
-            format!("{}.webm", filename)
-        } else if is_webp && has_mp4 {
-            format!("{}.mp4", filename)
-        } else {
-            filename.clone()
-        };
-        
-        // Determine if this is a converted WebP
-        let is_converted_webp = is_webp && (has_webm || has_mp4);
+        // No conversions are being done anymore
+        let is_converted_webp = false;
         
         // Check if it's a WebM
         let is_webm = filename.to_lowercase().ends_with(".webm");
@@ -149,7 +137,7 @@ async fn index(
             thumbnail: current_thumbnails.get(i).cloned().unwrap_or_default(),
             file_type: mime_type,
             size,
-            is_video: is_video || (is_webp && (has_webm || has_mp4)),
+            is_video: is_video || (is_webp && webp::is_animated_webp(&file_path)),
             source,
             is_converted_webp,
             is_webm,
@@ -362,19 +350,9 @@ fn get_filtered_files(
             info!("Adding to animated WebPs list: {}", filename);
             animated_webps.insert(filename.clone());
             
-            // Queue conversion for animated WebPs if WebM doesn't exist
-            if animated && !webm_exists {
-                info!("Queueing WebP for WebM conversion: {}", filename);
-                if let Ok(mut queue) = data.thumbnail_queue.lock() {
-                    if !queue.contains(filename) {
-                        queue.push(filename.clone());
-                        info!("Added to conversion queue: {}", filename);
-                    } else {
-                        info!("Already in conversion queue: {}", filename);
-                    }
-                } else {
-                    error!("Failed to lock thumbnail queue");
-                }
+            // No longer queue conversions for animated WebPs
+            if animated {
+                info!("Detected animated WebP: {}", filename);
             }
         } else {
             info!("WebP is not animated: {}", filename);
@@ -394,7 +372,6 @@ fn get_filtered_files(
                  f.to_lowercase().ends_with(".gif") ||
                  f.to_lowercase().ends_with(".bmp") ||
                  (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(f))) &&
-                !f.to_lowercase().ends_with(".webp.webm") &&
                 path.exists() // Make sure file exists
             })
             .collect(),
@@ -406,7 +383,6 @@ fn get_filtered_files(
                 f.to_lowercase().ends_with(".mov") ||
                 f.to_lowercase().ends_with(".mkv") ||
                 f.to_lowercase().ends_with(".webm") ||
-                f.to_lowercase().ends_with(".webp.webm") ||
                 animated_webps.contains(f)) &&
                 path.exists() // Make sure file exists
             })
@@ -496,8 +472,7 @@ fn get_counts(
              f.to_lowercase().ends_with(".png") ||
              f.to_lowercase().ends_with(".gif") ||
              f.to_lowercase().ends_with(".bmp") ||
-             (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(&f.to_string()))) &&
-            !f.to_lowercase().ends_with(".webp.webm")
+             (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(&f.to_string())))
         })
         .count();
     
@@ -509,7 +484,6 @@ fn get_counts(
             f.to_lowercase().ends_with(".mov") ||
             f.to_lowercase().ends_with(".mkv") ||
             f.to_lowercase().ends_with(".webm") ||
-            f.to_lowercase().ends_with(".webp.webm") ||
             animated_webps.contains(&f.to_string())
         })
         .count();
