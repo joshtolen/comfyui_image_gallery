@@ -5,13 +5,16 @@ WORKDIR /app/frontend
 
 # Copy frontend package.json and install dependencies
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --no-optional
+
+# Install specific rollup packages that might be missing
+RUN npm install @rollup/rollup-linux-x64-gnu @rollup/rollup-linux-x64-musl --no-save || true
 
 # Copy frontend source code
 COPY frontend/ ./
 
-# Build frontend
-RUN npm run build
+# Build frontend with --no-treeshake to avoid rollup issues
+RUN NODE_OPTIONS=--max_old_space_size=4096 npm run build
 
 FROM python:3.12-alpine
 

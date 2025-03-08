@@ -25,5 +25,16 @@ export default defineConfig({
   build: {
     outDir: '../static/react',
     emptyOutDir: true,
+    rollupOptions: {
+      // Disable features that might cause issues
+      treeshake: false,
+      output: {
+        manualChunks: undefined
+      }
+    }
+  },
+  optimizeDeps: {
+    // Force inclusion of dependencies that might be problematic
+    include: ['react', 'react-dom', 'react-router-dom']
   }
 });
