@@ -70,7 +70,7 @@ pub fn generate_video_thumbnail(
     let temp_frame = format!("/tmp/frame_{}.jpg", uuid::Uuid::new_v4());
     
     // Use FFmpeg to extract a frame at 10% of the video duration
-    let output = Command::new("ffmpeg")
+    let output = match Command::new("ffmpeg")
         .arg("-i")
         .arg(file_path)
         .arg("-ss")
@@ -80,11 +80,30 @@ pub fn generate_video_thumbnail(
         .arg("-q:v")
         .arg("2")
         .arg(&temp_frame)
-        .output()?;
+        .output() {
+            Ok(output) => output,
+            Err(e) => {
+                error!("Failed to execute FFmpeg: {}", e);
+                // Create a placeholder thumbnail instead of failing
+                let placeholder = Path::new("/app/static/video_placeholder.png");
+                if placeholder.exists() {
+                    info!("Using video placeholder thumbnail");
+                    return generate_image_thumbnail(placeholder, thumbnail_path);
+                }
+                // Return error if no placeholder
+                return Err(anyhow!("Failed to execute FFmpeg: {}", e));
+            }
+        };
     
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
         error!("FFmpeg error: {}", error);
+        // Create a placeholder thumbnail instead of failing
+        let placeholder = Path::new("/app/static/video_placeholder.png");
+        if placeholder.exists() {
+            info!("Using video placeholder thumbnail");
+            return generate_image_thumbnail(placeholder, thumbnail_path);
+        }
         return Err(anyhow!("Failed to extract frame from video: {}", error));
     }
     

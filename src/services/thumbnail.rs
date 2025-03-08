@@ -124,8 +124,8 @@ pub async fn start_thumbnail_processor(
     if !is_processing_value {
         // Start the processor
         process_thumbnail_queue(
-            Arc::new(Mutex::new(Vec::new())), 
-            Arc::new(Mutex::new(false)),
+            Arc::new(thumbnail_queue.clone()), 
+            Arc::new(is_processing.clone()),
             file_dir.to_string(),
             thumbnail_dir.to_string(),
             archive_dir.to_string(),
@@ -148,11 +148,14 @@ pub fn get_thumbnails(files: &[String], thumbnail_dir: &str) -> Vec<String> {
             
             // Prefer WebP, fall back to PNG
             if webp_path.exists() {
+                info!("Found WebP thumbnail for {}", filename);
                 webp_thumbnail
             } else if png_path.exists() {
+                info!("Found PNG thumbnail for {}", filename);
                 png_thumbnail
             } else {
                 // Default to WebP (will be generated later)
+                info!("No thumbnail found for {}, adding to queue", filename);
                 webp_thumbnail
             }
         })

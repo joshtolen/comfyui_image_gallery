@@ -151,7 +151,9 @@ async fn index(
     let (image_count, video_count, favorite_count) = get_counts(&all_files, &data);
     
     // Queue thumbnails for background generation
+    info!("Checking thumbnails for {} files", current_files.len());
     if !current_files.is_empty() {
+        let mut queue_count = 0;
         for filename in &current_files {
             let file_path = Path::new(&data.file_dir).join(filename);
             let webp_thumbnail = file::get_thumbnail_path(filename, &data.thumbnail_dir);
@@ -160,13 +162,16 @@ async fn index(
                 .join(format!("{}_thumbnail.png", png_base_name.to_string_lossy()));
             
             if !file_path.exists() {
+                info!("File doesn't exist, skipping thumbnail: {}", filename);
                 continue;
             }
             
             if !webp_thumbnail.exists() && !png_thumbnail.exists() {
+                info!("No thumbnail found for {}, adding to queue", filename);
                 if let Ok(mut queue) = data.thumbnail_queue.lock() {
                     if !queue.contains(filename) {
                         queue.push(filename.clone());
+                        queue_count += 1;
                     }
                 } else {
                     error!("Failed to lock thumbnail queue");
@@ -174,14 +179,47 @@ async fn index(
             }
         }
         
+        info!("Added {} files to thumbnail queue", queue_count);
+        
+        // Display queue size
+        let queue_size = {
+            if let Ok(queue) = data.thumbnail_queue.lock() {
+                queue.len()
+            } else {
+                error!("Failed to lock thumbnail queue");
+                0
+            }
+        };
+        
+        info!("Thumbnail queue size: {}", queue_size);
+        
+        // Get processing status
+        let is_processing = {
+            if let Ok(processing) = data.is_processing.lock() {
+                *processing
+            } else {
+                error!("Failed to lock processing flag");
+                false
+            }
+        };
+        
+        info!("Thumbnail processor running: {}", is_processing);
+        
         // Start background processor if needed
-        let _ = thumbnail::start_thumbnail_processor(
-            &data.thumbnail_queue,
-            &data.is_processing,
-            &data.file_dir,
-            &data.thumbnail_dir,
-            &data.archive_dir,
-        ).await;
+        if queue_size > 0 {
+            info!("Starting thumbnail processor");
+            let result = thumbnail::start_thumbnail_processor(
+                &data.thumbnail_queue,
+                &data.is_processing,
+                &data.file_dir,
+                &data.thumbnail_dir,
+                &data.archive_dir,
+            ).await;
+            
+            if let Err(e) = result {
+                error!("Error starting thumbnail processor: {}", e);
+            }
+        }
     }
     
     // Render template
