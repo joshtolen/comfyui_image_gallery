@@ -1,4 +1,4 @@
-FROM rust:1.75-slim as builder
+FROM rust:1.81-slim as builder
 
 # Set the working directory
 WORKDIR /usr/src/comfyui_gallery
