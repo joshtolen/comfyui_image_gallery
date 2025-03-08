@@ -298,7 +298,7 @@ fn get_filtered_files(
                  f.to_lowercase().ends_with(".png") ||
                  f.to_lowercase().ends_with(".gif") ||
                  f.to_lowercase().ends_with(".bmp") ||
-                 (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(&f))) &&
+                 (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(f))) &&
                 !f.to_lowercase().ends_with(".webp.mp4")
             })
             .collect(),
@@ -310,7 +310,7 @@ fn get_filtered_files(
                 f.to_lowercase().ends_with(".mkv") ||
                 f.to_lowercase().ends_with(".webm") ||
                 f.to_lowercase().ends_with(".webp.mp4") ||
-                animated_webps.contains(&f)
+                animated_webps.contains(f)
             })
             .collect(),
         "favorites" => {
@@ -318,7 +318,7 @@ fn get_filtered_files(
                 Ok(guard) => guard,
                 Err(_) => {
                     error!("Failed to lock favorites mutex");
-                    return all_files;
+                    return Ok(all_files);
                 }
             };
             

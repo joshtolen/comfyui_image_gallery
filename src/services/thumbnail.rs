@@ -54,14 +54,14 @@ pub async fn process_thumbnail_queue(
             debug!("Processing thumbnail for {}", file);
             
             // Check if file exists
-            let file_path = PathBuf::from(file_dir).join(&file);
+            let file_path = PathBuf::from(&file_dir).join(&file);
             if !file_path.exists() {
                 info!("File doesn't exist, skipping thumbnail generation: {}", file_path.display());
                 continue;
             }
             
             // Generate thumbnail
-            match image::generate_thumbnail(&file_path, thumbnail_dir, archive_dir) {
+            match image::generate_thumbnail(&file_path, &thumbnail_dir, &archive_dir) {
                 Ok(_) => info!("Generated thumbnail for {}", file),
                 Err(e) => error!("Failed to generate thumbnail for {}: {}", file, e),
             }
@@ -73,7 +73,7 @@ pub async fn process_thumbnail_queue(
             
             if extension == "webp" && webp::is_animated_webp(&file_path) {
                 // Start WebP to MP4 conversion
-                match webp::convert_webp_to_mp4(&file_path, archive_dir, thumbnail_dir).await {
+                match webp::convert_webp_to_mp4(&file_path, &archive_dir, &thumbnail_dir).await {
                     Ok(_) => info!("Converted WebP to MP4: {}", file),
                     Err(e) => error!("Failed to convert WebP to MP4: {}: {}", file, e),
                 }

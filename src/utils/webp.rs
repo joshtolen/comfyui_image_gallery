@@ -155,7 +155,7 @@ pub async fn convert_webp_to_mp4(
     
     // Use ffmpeg to extract frames and create video
     // First, get frame count using our custom parser
-    let frame_count = match check_webp_animation_frames(file_path) {
+    let _frame_count = match check_webp_animation_frames(file_path) {
         Ok(count) => count,
         Err(_) => {
             update_progress(
@@ -198,10 +198,11 @@ pub async fn convert_webp_to_mp4(
     let temp_dir_clone = temp_dir.clone();
     let progress_path_string2 = progress_path.to_string_lossy().to_string();
     let filename_clone = filename.to_string();
-    let archive_dir = archive_dir.to_string();
+    let archive_dir_string = archive_dir.to_string();
     
     tokio::spawn(async move {
-        let result = tokio::task::spawn_blocking(move || {
+        let progress_path_string3 = progress_path_string2.clone();
+        let _result = tokio::task::spawn_blocking(move || {
             // Use ffmpeg directly for conversion
             let output = Command::new("ffmpeg")
                 .arg("-i")
@@ -233,7 +234,7 @@ pub async fn convert_webp_to_mp4(
                         
                         // Move original WebP to archive
                         let filename = Path::new(&file_path_str_clone).file_name().unwrap_or_default();
-                        let archive_path = PathBuf::from(&archive_dir).join(filename);
+                        let archive_path = PathBuf::from(&archive_dir_string).join(filename);
                         
                         if let Some(parent) = archive_path.parent() {
                             let _ = fs::create_dir_all(parent);
@@ -251,7 +252,7 @@ pub async fn convert_webp_to_mp4(
                         
                         // Update progress to completed
                         update_progress(
-                            &PathBuf::from(&progress_path_string2),
+                            &PathBuf::from(progress_path_string2.clone()),
                             "completed",
                             Some(100),
                             Some(100),
@@ -303,7 +304,7 @@ pub async fn convert_webp_to_mp4(
         
         // Remove progress file after 10 seconds
         sleep(Duration::from_secs(10)).await;
-        let _ = fs::remove_file(&PathBuf::from(&progress_path_string2));
+        let _ = fs::remove_file(&PathBuf::from(progress_path_string3));
     });
     
     Ok(Some(mp4_path))

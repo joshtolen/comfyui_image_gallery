@@ -103,9 +103,9 @@ pub fn generate_video_thumbnail(
 pub fn generate_thumbnail(
     file_path: &Path,
     thumbnail_dir: &str,
-    archive_dir: &str,
+    _archive_dir: &str,
 ) -> Result<PathBuf> {
-    let filename = file_path.file_name().ok_or_else(|| anyhow!("Invalid file path"))?;
+    let _filename = file_path.file_name().ok_or_else(|| anyhow!("Invalid file path"))?;
     let base_name = file_path.file_stem().ok_or_else(|| anyhow!("Invalid file path"))?;
     let thumbnail_filename = format!("{}_thumbnail.webp", base_name.to_string_lossy());
     let thumbnail_path = Path::new(thumbnail_dir).join(&thumbnail_filename);
@@ -134,7 +134,7 @@ pub fn generate_thumbnail(
                 .with_guessed_format()
                 .map_err(|e| anyhow!("Failed to guess format: {}", e))?
                 .decode() {
-                Ok(img) => {
+                Ok(_img) => {
                     // Create thumbnail from the first frame
                     generate_image_thumbnail(&file_path, &thumbnail_path)?;
                 },

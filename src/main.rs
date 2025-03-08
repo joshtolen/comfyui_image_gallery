@@ -40,7 +40,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap_or_else(|_| std::collections::HashMap::new());
     
     // Initialize thumbnail processing queue
-    let thumbnail_queue = Mutex::new(Vec::new());
+    let thumbnail_queue = Mutex::new(Vec::<String>::new());
     let is_processing = Mutex::new(false);
 
     // Define and start HTTP server
