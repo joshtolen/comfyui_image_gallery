@@ -120,11 +120,24 @@ pub async fn process_thumbnail_queue(
                 } else {
                     // Start WebP to WebM conversion
                     match webp::convert_webp_to_webm(&file_path, &archive_dir, &thumbnail_dir).await {
-                        Ok(Some(webm_path)) => {
-                            if webm_path.exists() {
-                                info!("Successfully converted WebP to WebM: {}", file);
+                        Ok(Some(output_path)) => {
+                            if output_path.exists() {
+                                // Check if it's a WebM or a WebP (for fallback static images)
+                                let extension = output_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                                if extension.eq_ignore_ascii_case("webm") {
+                                    info!("Successfully converted WebP to WebM: {}", file);
+                                } else if extension.eq_ignore_ascii_case("webp") {
+                                    info!("Created static WebP fallback (animation conversion failed): {}", file);
+                                } else {
+                                    info!("Created conversion output: {} as {}", file, output_path.display());
+                                }
                             } else {
-                                error!("WebM file not created despite successful conversion: {}", file);
+                                error!("Output file not created despite successful conversion: {}", file);
+                                // Create a failure marker since the file doesn't exist
+                                let failure_marker = format!("{}.conversion_failed", file_path.to_string_lossy());
+                                if let Err(e) = std::fs::write(&failure_marker, "File not created after conversion") {
+                                    error!("Failed to create failure marker: {}", e);
+                                }
                             }
                         },
                         Ok(None) => info!("WebP is not animated, no conversion needed: {}", file),

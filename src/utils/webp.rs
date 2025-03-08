@@ -288,12 +288,15 @@ pub async fn convert_webp_to_webm(
                     // Copy the static WebP to the target path
                     if let Err(e) = fs::copy(&static_webp, &target_path) {
                         error!("Failed to copy static WebP: {}", e);
+                        
+                        // Return failure command result
+                        Command::new("false").output()
+                    } else {
+                        info!("Using static WebP as fallback: {}", target_path.display());
+                        
+                        // Return a successful command result
+                        Command::new("true").output()
                     }
-                    
-                    // Return a successful output to continue processing
-                    Command::new("echo")
-                        .arg("Using static WebP as fallback")
-                        .output()
                 } else {
                     // Last resort - just try a simple FFmpeg command
                     info!("All conversion methods failed, trying simple FFmpeg command");
