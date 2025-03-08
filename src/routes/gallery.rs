@@ -197,8 +197,8 @@ async fn index(
     context.insert("total_count", &all_files.len());
     context.insert("thumbnail_exists", &true); // Add missing variable
     
-    // Try with a simple template first for debugging
-    let rendered = match data.template_engine.render("simple.html", &context) {
+    // Switch back to index.html with simplified content
+    let rendered = match data.template_engine.render("index.html", &context) {
         Ok(r) => r,
         Err(e) => {
             error!("Template rendering error: {} - Details: {:?}", e, e);
