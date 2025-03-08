@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "ROLLUP_SKIP_LOAD_NATIVE_PLUGIN=true vite build --debug --mode production",
+    "build:alt": "mkdir -p ../static/react && cp -r public/* ../static/react/ 2>/dev/null || true",
     "preview": "vite preview"
   },
   "keywords": [],

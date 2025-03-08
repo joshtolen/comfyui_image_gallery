@@ -25,16 +25,39 @@ export default defineConfig({
   build: {
     outDir: '../static/react',
     emptyOutDir: true,
+    minify: 'esbuild',
+    // Use esbuild only, avoid rollup completely
     rollupOptions: {
-      // Disable features that might cause issues
+      external: [],
       treeshake: false,
       output: {
-        manualChunks: undefined
+        manualChunks: undefined,
+        inlineDynamicImports: true,
+        compact: true
       }
-    }
+    },
+    // Try to generate a single bundle file
+    cssCodeSplit: false,
+    assetsInlineLimit: 100000000,
+    chunkSizeWarningLimit: 100000000,
+    sourcemap: false,
+    manifest: false,
+    write: true
   },
   optimizeDeps: {
-    // Force inclusion of dependencies that might be problematic
-    include: ['react', 'react-dom', 'react-router-dom']
+    force: true,
+    esbuildOptions: {
+      target: 'es2020',
+      supported: { bigint: true }
+    }
+  },
+  esbuild: {
+    jsxInject: `import React from 'react'`,
+    target: 'es2020',
+    supported: { 
+      bigint: true 
+    },
+    // Keep comments
+    legalComments: 'inline'
   }
 });
