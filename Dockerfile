@@ -17,11 +17,8 @@ WORKDIR /app/frontend
 # Copy package.json and install dependencies
 COPY frontend/package*.json ./
 
-# Install esbuild binary directly
-RUN curl -sfL https://github.com/evanw/esbuild/releases/download/v0.17.19/esbuild-linux-x64-0.17.19.tgz | tar -xz -C /tmp && \
-    mkdir -p /usr/local/bin && \
-    mv /tmp/package/bin/esbuild /usr/local/bin/esbuild && \
-    chmod +x /usr/local/bin/esbuild
+# Install esbuild globally using npm
+RUN npm install -g esbuild@0.17.19
 
 # Install dependencies with force flag to avoid peer dependency issues
 RUN npm install --force --no-package-lock
