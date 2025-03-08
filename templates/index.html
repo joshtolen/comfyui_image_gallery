@@ -641,11 +641,11 @@
                 {% if image.is_video %}
                     <a href="#" class="video-link" data-source="/static/images/output/{{ image.source }}" data-filename="{{ image.filename }}">
                         <div class="video-indicator">▶️</div>
-                        <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
+                        <img class="thumbnail" src="/serve-thumbnail/{{ image.thumbnail }}" alt="{{ image.filename }}">
                     </a>
                 {% else %}
                     <a href="#" class="image-link" data-source="/static/images/output/{{ image.source }}" data-filename="{{ image.filename }}">
-                        <img class="thumbnail" src="/static/thumbnails/{{ image.thumbnail }}" alt="{{ image.filename }}">
+                        <img class="thumbnail" src="/serve-thumbnail/{{ image.thumbnail }}" alt="{{ image.filename }}">
                     </a>
                 {% endif %}
                 
