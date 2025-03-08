@@ -1,29 +1,32 @@
-FROM node:18-bullseye AS frontend-builder
+FROM node:16-alpine AS frontend-builder
 
 # Set environment variables to disable optional rollup builds
-ENV ROLLUP_SKIP_LOAD_NATIVE_PLUGIN=true
+ENV VITE_CJS_IGNORE_WARNING=true
+ENV VITE_CJS_TRACE_DEPRECATION=false
 ENV DISABLE_V8_COMPILE_CACHE=1
+ENV ROLLUP_WATCH=false
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 # Set the working directory for the frontend
 WORKDIR /app/frontend
 
-# Copy frontend package.json and install dependencies
+# Copy package.json and install dependencies
 COPY frontend/package*.json ./
 
-# Install dependencies with explicit flags to avoid Rollup issues
-RUN npm install --no-optional --legacy-peer-deps --force
+# Install dependencies with npm ci for reproducible builds
+RUN npm ci
+
+# Create a Rollup patch to skip the native plugin
+RUN mkdir -p /tmp/rollup-patch && \
+    echo 'module.exports = {};' > /tmp/rollup-patch/empty.js && \
+    mkdir -p node_modules/rollup/dist && \
+    cp /tmp/rollup-patch/empty.js node_modules/rollup/dist/native.js || true
 
 # Copy frontend source code
 COPY frontend/ ./
 
-# Try to build frontend
-RUN NODE_ENV=production npm run build || echo "Build failed, but continuing anyway"
-
-# Create a static react directory even if build fails
-RUN mkdir -p ../static/react && \
-    cp -r index.html ../static/react/ || true && \
-    cp -r src ../static/react/ || true && \
-    cp -r node_modules ../static/react/ || true
+# Build frontend
+RUN npm run build
 
 FROM python:3.12-alpine
 
@@ -43,11 +46,8 @@ COPY app.py /app/
 COPY static/ /app/static/
 COPY templates/ /app/templates/
 
-# Copy built frontend from previous stage (if it exists)
-COPY --from=frontend-builder /app/static/react/ /app/static/react/ || true
-
-# Copy fallback template if react build fails
-COPY templates/index.html /app/templates/
+# Copy built frontend from previous stage
+COPY --from=frontend-builder /app/frontend/dist/ /app/static/react/
 
 # Create directories only if they'll be mounted as volumes
 # These will be created at runtime if they don't exist

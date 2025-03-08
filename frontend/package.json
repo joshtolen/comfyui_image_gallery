@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "ROLLUP_SKIP_LOAD_NATIVE_PLUGIN=true vite build --debug --mode production",
-    "build:alt": "mkdir -p ../static/react && cp -r public/* ../static/react/ 2>/dev/null || true",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "keywords": [],
@@ -23,7 +22,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.24",
-    "rollup": "^3.29.4",
     "tailwindcss": "^3.3.2",
     "vite": "^4.5.2"
   }

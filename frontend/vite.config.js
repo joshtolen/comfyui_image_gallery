@@ -23,10 +23,9 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../static/react',
+    outDir: 'dist',
     emptyOutDir: true,
     minify: 'esbuild',
-    // Use esbuild only, avoid rollup completely
     rollupOptions: {
       external: [],
       treeshake: false,
@@ -36,13 +35,10 @@ export default defineConfig({
         compact: true
       }
     },
-    // Try to generate a single bundle file
     cssCodeSplit: false,
-    assetsInlineLimit: 100000000,
-    chunkSizeWarningLimit: 100000000,
-    sourcemap: false,
-    manifest: false,
-    write: true
+    assetsInlineLimit: 10000,
+    chunkSizeWarningLimit: 500,
+    sourcemap: false
   },
   optimizeDeps: {
     force: true,
