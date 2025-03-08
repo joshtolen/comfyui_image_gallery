@@ -1,27 +1,55 @@
-FROM python:3.12-slim
+FROM rust:1.75-slim as builder
 
-# Set the working directory in the container
+# Set the working directory
+WORKDIR /usr/src/comfyui_gallery
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Cargo files to leverage Docker caching
+COPY Cargo.toml .
+
+# Create a dummy main.rs to build dependencies
+RUN mkdir -p src && \
+    echo "fn main() {println!(\"Hello, world!\");}" > src/main.rs && \
+    cargo build --release && \
+    rm -rf src
+
+# Copy the real source code
+COPY src/ src/
+COPY templates/ templates/
+COPY static/ static/
+
+# Build the application
+RUN cargo build --release
+
+# Create the production image
+FROM debian:bookworm-slim
+
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install runtime dependencies (mainly ffmpeg)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories for images and thumbnails
 RUN mkdir -p /app/static/images/output /app/static/thumbnails /app/static/images/output/archive
 
-# Copy requirements to the container
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application files
-COPY app.py /app/
-COPY static/ /app/static/
-COPY templates/ /app/templates/
+# Copy the binary and static assets from the builder stage
+COPY --from=builder /usr/src/comfyui_gallery/target/release/comfyui_image_gallery /app/
+COPY --from=builder /usr/src/comfyui_gallery/templates/ /app/templates/
+COPY --from=builder /usr/src/comfyui_gallery/static/ /app/static/
 
 # Set proper permissions for the app directories
 RUN chmod -R 755 /app
@@ -29,5 +57,8 @@ RUN chmod -R 755 /app
 # Expose the port the app runs on
 EXPOSE 9999
 
+# Set environment variables
+ENV RUST_LOG=info
+
 # Set startup command
-CMD ["python", "app.py"]
+CMD ["./comfyui_image_gallery"]

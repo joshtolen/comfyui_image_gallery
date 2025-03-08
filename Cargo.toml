@@ -1,0 +1,45 @@
+[package]
+name = "comfyui_image_gallery"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+actix-web = "4.4"
+actix-files = "0.6"
+actix-cors = "0.6"
+
+# Template engine
+tera = "1.19"
+
+# Serialization/deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.33", features = ["full"] }
+
+# Image processing
+image = "0.24"
+
+# Video processing dependencies
+ffmpeg-next = "6.0"
+
+# Utility
+futures = "0.3"
+chrono = "0.4"
+mime = "0.3"
+mime_guess = "2.0"
+uuid = { version = "1.4", features = ["v4"] }
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+env_logger = "0.10"
+lazy_static = "1.4"
+regex = "1.9"
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
