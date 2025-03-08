@@ -30,13 +30,21 @@ async fn index(
         .unwrap_or_else(|| "dark".to_string());
     
     // Get file type filter from query params
-    let query_params = web::Query::<HashMap<String, String>>::from_query(req.query_string()).unwrap_or_default();
-    let file_type = query_params.get("type").cloned().unwrap_or_else(|| "all".to_string());
+    let query_string = req.query_string();
+    let file_type = if let Ok(query) = web::Query::<HashMap<String, String>>::from_query(query_string) {
+        query.get("type").cloned().unwrap_or_else(|| "all".to_string())
+    } else {
+        "all".to_string()
+    };
     
     // Get page number from query params
-    let page = query_params.get("page")
-        .and_then(|p| p.parse::<usize>().ok())
-        .unwrap_or(1);
+    let page = if let Ok(query) = web::Query::<HashMap<String, String>>::from_query(query_string) {
+        query.get("page")
+            .and_then(|p| p.parse::<usize>().ok())
+            .unwrap_or(1)
+    } else {
+        1
+    };
     
     // Get list of files
     let all_files = match get_filtered_files(&data, &file_type) {
@@ -116,12 +124,12 @@ async fn index(
         }
         
         // Check if it's a favorite
-        let is_favorite = {
-            let favorites = data.favorites.lock().unwrap_or_else(|_| {
+        let is_favorite = match data.favorites.lock() {
+            Ok(favorites) => favorites.contains_key(filename),
+            Err(_) => {
                 error!("Failed to lock favorites mutex");
-                Box::new(HashMap::new())
-            });
-            favorites.contains_key(filename)
+                false
+            }
         };
         
         // Add to image data
@@ -156,13 +164,12 @@ async fn index(
             }
             
             if !webp_thumbnail.exists() && !png_thumbnail.exists() {
-                let mut queue = data.thumbnail_queue.lock().unwrap_or_else(|_| {
+                if let Ok(mut queue) = data.thumbnail_queue.lock() {
+                    if !queue.contains(filename) {
+                        queue.push(filename.clone());
+                    }
+                } else {
                     error!("Failed to lock thumbnail queue");
-                    Box::new(Vec::new())
-                });
-                
-                if !queue.contains(filename) {
-                    queue.push(filename.clone());
                 }
             }
         }
@@ -270,13 +277,12 @@ fn get_filtered_files(
                 
                 // Queue conversion for animated WebPs if MP4 doesn't exist
                 if animated && !mp4_exists {
-                    let mut queue = data.thumbnail_queue.lock().unwrap_or_else(|_| {
+                    if let Ok(mut queue) = data.thumbnail_queue.lock() {
+                        if !queue.contains(filename) {
+                            queue.push(filename.clone());
+                        }
+                    } else {
                         error!("Failed to lock thumbnail queue");
-                        Box::new(Vec::new())
-                    });
-                    
-                    if !queue.contains(filename) {
-                        queue.push(filename.clone());
                     }
                 }
             }
@@ -292,7 +298,7 @@ fn get_filtered_files(
                  f.to_lowercase().ends_with(".png") ||
                  f.to_lowercase().ends_with(".gif") ||
                  f.to_lowercase().ends_with(".bmp") ||
-                 (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(f))) &&
+                 (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(&f))) &&
                 !f.to_lowercase().ends_with(".webp.mp4")
             })
             .collect(),
@@ -304,17 +310,20 @@ fn get_filtered_files(
                 f.to_lowercase().ends_with(".mkv") ||
                 f.to_lowercase().ends_with(".webm") ||
                 f.to_lowercase().ends_with(".webp.mp4") ||
-                animated_webps.contains(f)
+                animated_webps.contains(&f)
             })
             .collect(),
         "favorites" => {
-            let favorites = data.favorites.lock().unwrap_or_else(|_| {
-                error!("Failed to lock favorites mutex");
-                Box::new(HashMap::new())
-            });
+            let favorites_guard = match data.favorites.lock() {
+                Ok(guard) => guard,
+                Err(_) => {
+                    error!("Failed to lock favorites mutex");
+                    return all_files;
+                }
+            };
             
             all_files.into_iter()
-                .filter(|f| favorites.contains_key(f))
+                .filter(|f| favorites_guard.contains_key(f))
                 .collect()
         },
         _ => all_files,
@@ -386,7 +395,7 @@ fn get_counts(
              f.to_lowercase().ends_with(".png") ||
              f.to_lowercase().ends_with(".gif") ||
              f.to_lowercase().ends_with(".bmp") ||
-             (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(f))) &&
+             (f.to_lowercase().ends_with(".webp") && !animated_webps.contains(&f.to_string()))) &&
             !f.to_lowercase().ends_with(".webp.mp4")
         })
         .count();
@@ -400,19 +409,22 @@ fn get_counts(
             f.to_lowercase().ends_with(".mkv") ||
             f.to_lowercase().ends_with(".webm") ||
             f.to_lowercase().ends_with(".webp.mp4") ||
-            animated_webps.contains(*f)
+            animated_webps.contains(&f.to_string())
         })
         .count();
     
     // Count favorites
-    let favorites = data.favorites.lock().unwrap_or_else(|_| {
-        error!("Failed to lock favorites mutex");
-        Box::new(HashMap::new())
-    });
-    
-    let favorite_count = all_files.iter()
-        .filter(|f| favorites.contains_key(*f))
-        .count();
+    let favorite_count = match data.favorites.lock() {
+        Ok(favorites) => {
+            all_files.iter()
+                .filter(|f| favorites.contains_key(*f))
+                .count()
+        },
+        Err(_) => {
+            error!("Failed to lock favorites mutex");
+            0
+        }
+    };
     
     (image_count, video_count, favorite_count)
 }

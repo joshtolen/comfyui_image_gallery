@@ -48,7 +48,7 @@ pub fn generate_image_thumbnail(
     // Copy the resized image onto the canvas
     for y in 0..new_height {
         for x in 0..new_width {
-            let pixel = resized.get_pixel(x, y);
+            let pixel = *resized.get_pixel(x, y);
             thumbnail.put_pixel(x + x_offset, y + y_offset, pixel);
         }
     }

@@ -61,8 +61,8 @@ async fn main() -> std::io::Result<()> {
                 archive_dir: archive_dir.clone(),
                 favorites_file: favorites_file.clone(),
                 favorites: Mutex::new(favorites.clone()),
-                thumbnail_queue: thumbnail_queue.clone(),
-                is_processing: is_processing.clone(),
+                thumbnail_queue: Mutex::new(Vec::new()),
+                is_processing: Mutex::new(false),
                 template_engine: tera.clone(),
             }))
             // Enable logger, compress responses

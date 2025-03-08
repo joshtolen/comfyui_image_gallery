@@ -1,5 +1,5 @@
-use actix_web::{web, HttpResponse, Responder, HttpRequest, get, post, cookie::{Cookie, SameSite}};
-use chrono::Duration;
+use actix_web::{web, HttpResponse, Responder, HttpRequest, post, cookie::{Cookie, SameSite}};
+use actix_web::cookie::time::Duration;
 use serde::{Deserialize, Serialize};
 use log::{info, error};
 
@@ -24,7 +24,7 @@ async fn toggle_theme(req: HttpRequest) -> impl Responder {
     
     // Create cookie that expires in 1 year
     let cookie = Cookie::build("theme", new_theme.clone())
-        .max_age(Duration::days(365).to_std().unwrap())
+        .max_age(Duration::days(365))
         .path("/")
         .secure(false) // Set to true in production with HTTPS
         .http_only(false)

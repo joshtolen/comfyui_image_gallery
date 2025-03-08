@@ -9,11 +9,11 @@ use crate::utils::{file, image, webp};
 
 /// Process thumbnails in the queue
 pub async fn process_thumbnail_queue(
-    thumbnail_queue: &Mutex<Vec<String>>, 
-    is_processing: &Mutex<bool>,
-    file_dir: &str,
-    thumbnail_dir: &str,
-    archive_dir: &str,
+    thumbnail_queue: std::sync::Arc<Mutex<Vec<String>>>, 
+    is_processing: std::sync::Arc<Mutex<bool>>,
+    file_dir: String,
+    thumbnail_dir: String,
+    archive_dir: String,
 ) -> Result<()> {
     // Lock the processing flag
     let mut is_processing_guard = is_processing
@@ -100,6 +100,7 @@ pub async fn start_thumbnail_processor(
     thumbnail_dir: &str,
     archive_dir: &str,
 ) -> Result<()> {
+    use std::sync::Arc;
     // Check if there are items in the queue
     let queue_empty = {
         let queue = thumbnail_queue
@@ -123,11 +124,11 @@ pub async fn start_thumbnail_processor(
     if !is_processing_value {
         // Start the processor
         process_thumbnail_queue(
-            thumbnail_queue, 
-            is_processing,
-            file_dir,
-            thumbnail_dir,
-            archive_dir,
+            Arc::new(Mutex::new(Vec::new())), 
+            Arc::new(Mutex::new(false)),
+            file_dir.to_string(),
+            thumbnail_dir.to_string(),
+            archive_dir.to_string(),
         ).await?;
     }
     

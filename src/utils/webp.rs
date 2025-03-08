@@ -173,14 +173,14 @@ pub async fn convert_webp_to_mp4(
     
     // Start a separate async task to monitor ffmpeg progress
     let (tx, mut rx) = mpsc::channel(32);
-    let progress_path_clone = progress_path.clone();
+    let progress_path_string = progress_path.to_string_lossy().to_string();
     let filename_clone = filename.to_string();
     
     // Progress monitoring task
     tokio::spawn(async move {
         while let Some(percent) = rx.recv().await {
             update_progress(
-                &progress_path_clone,
+                &PathBuf::from(&progress_path_string),
                 "encoding_video",
                 Some(percent),
                 Some(100),
@@ -196,7 +196,7 @@ pub async fn convert_webp_to_mp4(
     let file_path_str_clone = file_path_str.clone();
     let mp4_path_clone = mp4_path.clone();
     let temp_dir_clone = temp_dir.clone();
-    let progress_path_clone = progress_path.clone();
+    let progress_path_string2 = progress_path.to_string_lossy().to_string();
     let filename_clone = filename.to_string();
     let archive_dir = archive_dir.to_string();
     
@@ -251,7 +251,7 @@ pub async fn convert_webp_to_mp4(
                         
                         // Update progress to completed
                         update_progress(
-                            &progress_path_clone,
+                            &PathBuf::from(&progress_path_string2),
                             "completed",
                             Some(100),
                             Some(100),
@@ -266,7 +266,7 @@ pub async fn convert_webp_to_mp4(
                         error!("FFmpeg error: {}", error);
                         
                         update_progress(
-                            &progress_path_clone,
+                            &PathBuf::from(&progress_path_string2),
                             "error",
                             None,
                             None,
@@ -282,7 +282,7 @@ pub async fn convert_webp_to_mp4(
                     error!("Failed to execute ffmpeg: {}", e);
                     
                     update_progress(
-                        &progress_path_clone,
+                        &PathBuf::from(&progress_path_string2),
                         "error",
                         None,
                         None,
@@ -303,7 +303,7 @@ pub async fn convert_webp_to_mp4(
         
         // Remove progress file after 10 seconds
         sleep(Duration::from_secs(10)).await;
-        let _ = fs::remove_file(&progress_path_clone);
+        let _ = fs::remove_file(&PathBuf::from(&progress_path_string2));
     });
     
     Ok(Some(mp4_path))

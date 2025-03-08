@@ -21,8 +21,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 #[get("/file-info/{filename:.*}")]
 async fn file_info(
     data: web::Data<AppState>,
-    web::Path(filename): web::Path<String>,
+    path: web::Path<String>,
 ) -> impl Responder {
+    let filename = path.into_inner();
     let file_path = Path::new(&data.file_dir).join(&filename);
     
     if !file_path.exists() {
@@ -171,8 +172,9 @@ async fn delete_file(
 #[get("/serve-thumbnail/{filename:.*}")]
 async fn serve_thumbnail(
     data: web::Data<AppState>,
-    web::Path(filename): web::Path<String>,
+    path: web::Path<String>,
 ) -> impl Responder {
+    let filename = path.into_inner();
     let file_path = Path::new(&data.thumbnail_dir).join(&filename);
     
     if !file_path.exists() {
@@ -210,8 +212,9 @@ async fn serve_thumbnail(
 #[get("/check-file-status/{filename:.*}")]
 async fn check_file_status(
     data: web::Data<AppState>,
-    web::Path(filename): web::Path<String>,
+    path: web::Path<String>,
 ) -> impl Responder {
+    let filename = path.into_inner();
     let original_path = Path::new(&data.file_dir).join(&filename);
     let archive_path = Path::new(&data.archive_dir).join(&filename);
     let mp4_path = Path::new(&data.file_dir).join(format!("{}.mp4", filename));
@@ -230,8 +233,9 @@ async fn check_file_status(
 #[get("/conversion-progress/{filename:.*}")]
 async fn conversion_progress(
     data: web::Data<AppState>,
-    web::Path(filename): web::Path<String>,
+    path: web::Path<String>,
 ) -> impl Responder {
+    let filename = path.into_inner();
     info!("Checking conversion progress for: {}", filename);
     
     // Get base name for progress file
@@ -270,13 +274,12 @@ async fn conversion_progress(
     }
     
     // Check if file is in queue
-    let in_queue = {
-        let queue = data.thumbnail_queue.lock().unwrap_or_else(|_| {
+    let in_queue = match data.thumbnail_queue.lock() {
+        Ok(queue) => queue.contains(&filename),
+        Err(_) => {
             error!("Failed to lock thumbnail queue");
-            Box::new(Vec::new())
-        });
-        
-        queue.contains(&filename)
+            false
+        }
     };
     
     HttpResponse::Ok().json(serde_json::json!({
