@@ -193,9 +193,9 @@
 
                         <button class="favorite-icon w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 translate-x-2 transition-all hover:bg-yellow-500/90 hover:opacity-100 group-hover:opacity-80 group-hover:translate-x-0" 
                                 data-filename="{{ image.filename }}"
-                                data-is-favorite="{{ image.is_favorite|default(false)|lower }}"
-                                aria-label="{{ 'Remove from favorites' if image.is_favorite else 'Add to favorites' }}">
-                            <span aria-hidden="true" class="favorite-star">{{ '⭐' if image.is_favorite else '☆' }}</span>
+                                data-is-favorite="{{ image.is_favorite | default(value=false) | lower }}"
+                                aria-label="{% if image.is_favorite %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                            <span aria-hidden="true" class="favorite-star">{% if image.is_favorite %}⭐{% else %}☆{% endif %}</span>
                         </button>
                     </div>
                     
@@ -267,7 +267,7 @@
                     <!-- Filename display -->
                     <div class="absolute bottom-0 left-0 w-full bg-black/50 text-white py-1 px-2 text-xs text-center whitespace-nowrap 
                                 overflow-hidden text-ellipsis opacity-0 translate-y-full transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
-                        {{ image.filename|truncate(30) }}
+                        {{ image.filename | truncate(length=30) }}
                     </div>
                 </div>
             </div>
@@ -291,7 +291,11 @@
             {% endif %}
             
             <div class="flex flex-wrap gap-2 justify-center">
-                {% for p in range(page-2 if page-2 > 0 else 1, page+3 if page+3 <= total_pages+1 else total_pages+1) %}
+                {% set start_page = page-2 %}
+                {% if start_page < 1 %}{% set start_page = 1 %}{% endif %}
+                {% set end_page = page+3 %}
+                {% if end_page > total_pages+1 %}{% set end_page = total_pages+1 %}{% endif %}
+                {% for p in range(start=start_page, end=end_page) %}
                     <a href="?type={{ file_type }}&page={{ p }}" 
                        class="px-3 py-2 rounded-md font-medium transition-all hover:-translate-y-0.5 
                        {% if p == page and theme == 'dark' %}bg-primary-dark text-white font-bold
